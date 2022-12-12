@@ -4,7 +4,7 @@ import requests
 from jenkinsapi.jenkins import Jenkins
 import xml.etree.ElementTree as ET
 
-folder = "/Users/malavika/Desktop/PycharmProjects/Kf-Devops-Tools/kf-devops-tools/Tools/xml/"
+folder = "Tools/xml"
 filename = "cleanup_pods.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
@@ -19,7 +19,7 @@ jenkins_password = os.environ["jenkins_pwd"]
 
 headers = {
     'Content-Type': 'application/json',
-    "Authorization": f"Basic {jenkins_username}:{jenkins_password}",
+    'Authorization': 'Basic bWFsYXZpa2FAa2lzc2Zsb3cuY29tOjExNzg3ZmI5OWZmMjhlOTdiNmM3MDk0MGUxY2M1M2U1NWI=',
     'Cookie': 'JSESSIONID.fd0ba9f1=node084zc0jckw5cb1g631h6bp0ds342714.node0'
 }
 
@@ -40,9 +40,7 @@ def create_nested_folder():
 
 def create_job(name):
     jenkins_url = f'https://seaeagle.zingworks.com/job/{name}/job/{subfolder_name}/'
-    username = jenkins_username
-    password = jenkins_password
-    server = Jenkins(jenkins_url, username=username, password=password)
+    server = Jenkins(jenkins_url, username=jenkins_username, password=jenkins_password)
     job_config = ET.tostring(root, encoding="unicode")
     server.create_job(job_name, job_config)
 
