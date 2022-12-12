@@ -1,0 +1,65 @@
+def Namespace = ""
+pipeline {
+    agent any
+    stages {
+        stage('Get folder name'){
+            steps {
+                script{
+                    Namespace = getFolderName()
+                }
+            }
+        }
+        stage('Setup parameters') {
+            steps {
+                script {
+                    properties([
+                        parameters([
+                            choice(
+                                choices: ['accountsv2', 'audit-cleanup', 'audit', 'auditlogv2', 'auditv2-cleanup', 'auditv2', 'automation', 'automationv2', 'batchuserv2', 'gcmv2', 'indexmanagerv2', 'scheduler', 'schedulerv2', 'all_jobs'],
+                                name: 'Kill_job'
+                            )
+                        ])
+                    ])
+                }
+            }
+        }
+        stage('Activate Cluster') {
+            steps {
+                sh """#!/usr/bin/env bash
+                echo "namespace is $Namespace"
+                gcloud container clusters get-credentials $Namespace-gcp-gke-cluster1-p002 --zone us-central1-b --project kf-dev-workload-p001
+                mkdir -p "$HOME/.tmp/"
+                export KUBECONFIG="$HOME/.tmp/$Namespace"
+                echo "✅ $Namespace cluster has been activated"
+                """
+            }
+        }
+        stage('Deleting cron jobs') {
+            steps {
+                sh """#!/bin/bash
+                if [ $Kill_job != 'all_jobs' ]
+                then
+                    kubectl --namespace=$Namespace get jobs | grep -i $Kill_job | grep '[0-9]d'
+                    kubectl --namespace=$Namespace get jobs |grep -i $Kill_job |grep '[0-9]d' | cut -d ' ' -f1| xargs kubectl --namespace=$Namespace delete jobs
+                    echo "The deletion of job is completed."
+                else
+                    kubectl --namespace=$Namespace get jobs | grep '[0-9]d'
+                    kubectl --namespace=$Namespace get jobs |grep '[0-9]d' | cut -d ' ' -f1| xargs kubectl --namespace=$Namespace delete jobs
+                    echo "The deletion of job is completed."
+                fi
+                """
+            }
+        }
+    }
+}
+
+def getFolderName() {
+    try{
+      def array = pwd().split("/")[5];
+      return array;
+    }
+    catch(e){
+        echo "error" + e;
+    }
+}
+
