@@ -3,7 +3,7 @@ import os
 import jenkins
 import xml.etree.ElementTree as ET
 
-folder = "/Users/malavika/Desktop/PycharmProjects/kf-jenkins/kf-jenkins/xml/"
+folder = "https://github.com/kf-avengers/kf-jenkins/blob/b876170d3312d80e48ecccb0411e3437c870855d/xml"
 filename = "cleanup_pods.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
