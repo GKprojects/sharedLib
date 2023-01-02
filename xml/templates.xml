@@ -12,20 +12,20 @@
 <configVersion>2</configVersion>
 <userRemoteConfigs>
 <hudson.plugins.git.UserRemoteConfig>
-<url>git@github.com:OrangeScape/kf-devops-tools.git</url>
+<url>{{ job_repo }}</url>
 <credentialsId>rammanokar_github</credentialsId>
 </hudson.plugins.git.UserRemoteConfig>
 </userRemoteConfigs>
 <branches>
 <hudson.plugins.git.BranchSpec>
-<name>feature/active-script-fix-for-Jenkins</name>
+<name>{{ job_branch_name }}</name>
 </hudson.plugins.git.BranchSpec>
 </branches>
 <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
 <submoduleCfg class="empty-list"/>
 <extensions/>
 </scm>
-<scriptPath>pegasiScaling/Jenkinsfile</scriptPath>
+<scriptPath>{{ job_script_path }}</scriptPath>
 <lightweight>true</lightweight>
 </definition>
 <triggers/>
