@@ -3,14 +3,16 @@ import os
 import jenkins
 import xml.etree.ElementTree as ET
 
-folder = "https://github.com/kf-avengers/kf-jenkins/blob/b876170d3312d80e48ecccb0411e3437c870855d/xml"
+ns = os.getenv("NAMESPACE")
+cluster = os.getenv("CLUSTER_NS")
+ROOT_DIR = os.getenv("ROOT_DIR")
+folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml"
 filename = "cleanup_pods.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
 root = tree.getroot()
 
-folder_name = os.getenv("NAMESPACE")
-# folder_name = "stg-test"
+folder_name = ns
 subfolder_name = "Tools"
 job_name = "cleanup_pods"
 
