@@ -65,7 +65,7 @@
 <userRemoteConfigs>
 <hudson.plugins.git.UserRemoteConfig>
 <url>git@github.com:kf-avengers/kf-jenkins.git</url>
-<credentialsId>swami_github</credentialsId>
+<credentialsId>rammanokar_github</credentialsId>
 </hudson.plugins.git.UserRemoteConfig>
 </userRemoteConfigs>
 <branches>
