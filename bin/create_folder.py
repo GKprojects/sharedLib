@@ -7,10 +7,22 @@ ns = os.getenv("NAMESPACE")
 cluster = os.getenv("CLUSTER_NS")
 ROOT_DIR = os.getenv("ROOT_DIR")
 folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml"
-filename = "cleanup_pods.xml"
+filename = "templates.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
 root = tree.getroot()
+
+url_elements = root.findall('.definition/scm/userRemoteConfigs/hudson.plugins.git.UserRemoteConfig/url')
+for url_element in url_elements:
+    url_element.text = 'git@github.com:kf-avengers/kf-jenkins.git'
+
+name_elements = root.findall('.definition/scm/branches/hudson.plugins.git.BranchSpec/name')
+for name_element in name_elements:
+    name_element.text = '*/main'
+
+script_path_elements = root.findall('./definition/scriptPath')
+for script_path_element in script_path_elements:
+    script_path_element.text = 'Tools/cleanup_pods/Jenkinsfile'
 
 folder_name = ns
 subfolder_name = "Tools"
@@ -21,7 +33,7 @@ jenkins_password = os.environ["jenkins_pwd"]
 auth = (jenkins_username, jenkins_password)
 headers = {
     "Content-Type": "application/json",
-    "Jenkins-Crumb": "fb6e0bdad638670bf4f96affd5aa650ed015a069669ac5db5c09b4a4dd63140d",
+    "cleanup_pods-Crumb": "fb6e0bdad638670bf4f96affd5aa650ed015a069669ac5db5c09b4a4dd63140d",
     'Cookie': 'JSESSIONID.fb6e0bdad638670bf4f96affd5aa650ed015a069669ac5db5c09b4a4dd63140d',
 }
 
