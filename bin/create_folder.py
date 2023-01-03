@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 ns = os.getenv("NAMESPACE")
 cluster = os.getenv("CLUSTER_NS")
 ROOT_DIR = os.getenv("ROOT_DIR")
-folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml"
+folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml/Tools"
 filename = "templates.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
