@@ -2,12 +2,11 @@
 import os
 import jenkins
 import xml.etree.ElementTree as ET
-global server
 
 ns = os.getenv("NAMESPACE")
 cluster = os.getenv("CLUSTER_NS")
 ROOT_DIR = os.getenv("ROOT_DIR")
-folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml/Tools"
+folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml"
 filename = "templates.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
@@ -61,9 +60,3 @@ def create_job(name):
 create_folder()
 create_nested_folder()
 create_job(name=folder_name)
-
-
-if server.job_exists(job_name):
-    server.reconfig_job(job_name, job_config)
-else:
-    server.create_job(job_name, job_config)
