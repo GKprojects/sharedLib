@@ -2,6 +2,7 @@
 import os
 import jenkins
 import xml.etree.ElementTree as ET
+global server
 
 ns = os.getenv("NAMESPACE")
 cluster = os.getenv("CLUSTER_NS")
@@ -27,6 +28,7 @@ for script_path_element in script_path_elements:
 folder_name = ns
 subfolder_name = "Tools"
 job_name = "cleanup_pods"
+job_config = ET.tostring(root, encoding="unicode")
 
 jenkins_username = os.environ["jenkins_user"]
 jenkins_password = os.environ["jenkins_pwd"]
@@ -53,10 +55,15 @@ def create_nested_folder():
 def create_job(name):
     jenkins_url = f'https://seaeagle.zingworks.com/job/{name}/job/{subfolder_name}/'
     server = jenkins.Jenkins(jenkins_url, username=jenkins_username, password=jenkins_password)
-    job_config = ET.tostring(root, encoding="unicode")
     server.create_job(job_name, job_config)
 
 
 create_folder()
 create_nested_folder()
 create_job(name=folder_name)
+
+
+if server.job_exists(job_name):
+    server.reconfig_job(job_name, job_config)
+else:
+    server.create_job(job_name, job_config)
