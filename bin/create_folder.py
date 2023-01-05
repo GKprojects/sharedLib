@@ -6,8 +6,7 @@ import xml.etree.ElementTree as ET
 ns = os.getenv("NAMESPACE")
 cluster = os.getenv("CLUSTER_NS")
 ROOT_DIR = os.getenv("ROOT_DIR")
-# folder = ROOT_DIR + "/build/" + cluster + "/jenkins/xml/Tools"
-folder = "/Users/malavika/Desktop/PycharmProjects/kf-jenkins/kf-jenkins/xml/Tools"
+folder = ROOT_DIR + "/build/" + cluster + "/jenkins/xml/Tools"
 filename = "templates.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
@@ -25,8 +24,7 @@ script_path_elements = root.findall('./definition/scriptPath')
 for script_path_element in script_path_elements:
     script_path_element.text = 'Tools/cleanup_pods/Jenkinsfile'
 
-# folder_name = ns
-folder_name = "stg-test"
+folder_name = ns
 jenkins_url = f'https://seaeagle.zingworks.com/'
 subfolder_name = "Tools"
 job_name = "cleanup_pods"
