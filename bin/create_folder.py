@@ -59,8 +59,15 @@ def create_job(name):
 
 try:
     info = server.get_job_info(folder_name)
-    create_job(name=folder_name)
+    jenkins_url2 = f'https://seaeagle.zingworks.com/job/{folder_name}/job/{subfolder_name}/'
+    server = jenkins.Jenkins(jenkins_url2, username=jenkins_username, password=jenkins_password)
+    if server.job_exists(job_name):
+        server.reconfig_job(job_name, job_config)
+    else:
+        create_job(name=folder_name)
+
 except Exception as e:
     create_folder()
     create_nested_folder()
     create_job(name=folder_name)
+
