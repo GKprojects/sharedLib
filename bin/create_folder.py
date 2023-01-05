@@ -6,7 +6,8 @@ import xml.etree.ElementTree as ET
 ns = os.getenv("NAMESPACE")
 cluster = os.getenv("CLUSTER_NS")
 ROOT_DIR = os.getenv("ROOT_DIR")
-folder = ROOT_DIR+"/build/" + cluster + "/jenkins/xml/Tools"
+# folder = ROOT_DIR + "/build/" + cluster + "/jenkins/xml/Tools"
+folder = "/Users/malavika/Desktop/PycharmProjects/kf-jenkins/kf-jenkins/xml/Tools"
 filename = "templates.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
@@ -24,13 +25,15 @@ script_path_elements = root.findall('./definition/scriptPath')
 for script_path_element in script_path_elements:
     script_path_element.text = 'Tools/cleanup_pods/Jenkinsfile'
 
-folder_name = ns
+# folder_name = ns
+folder_name = "stg-test"
+jenkins_url = f'https://seaeagle.zingworks.com/'
 subfolder_name = "Tools"
 job_name = "cleanup_pods"
 job_config = ET.tostring(root, encoding="unicode")
-
 jenkins_username = os.environ["jenkins_user"]
 jenkins_password = os.environ["jenkins_pwd"]
+server = jenkins.Jenkins(jenkins_url, username=jenkins_username, password=jenkins_password)
 auth = (jenkins_username, jenkins_password)
 headers = {
     "Content-Type": "application/json",
@@ -40,23 +43,26 @@ headers = {
 
 
 def create_folder():
-    jenkins_url = f'https://seaeagle.zingworks.com/'
     server = jenkins.Jenkins(jenkins_url, username=jenkins_username, password=jenkins_password)
     server.create_folder(folder_name)
 
 
 def create_nested_folder():
-    jenkins_url = f'https://seaeagle.zingworks.com/job/{folder_name}/'
-    server = jenkins.Jenkins(jenkins_url, username=jenkins_username, password=jenkins_password)
+    jenkins_url1 = f'https://seaeagle.zingworks.com/job/{folder_name}'
+    server = jenkins.Jenkins(jenkins_url1, username=jenkins_username, password=jenkins_password)
     server.create_folder(subfolder_name)
 
 
 def create_job(name):
-    jenkins_url = f'https://seaeagle.zingworks.com/job/{name}/job/{subfolder_name}/'
-    server = jenkins.Jenkins(jenkins_url, username=jenkins_username, password=jenkins_password)
+    jenkins_url2 = f'https://seaeagle.zingworks.com/job/{name}/job/{subfolder_name}/'
+    server = jenkins.Jenkins(jenkins_url2, username=jenkins_username, password=jenkins_password)
     server.create_job(job_name, job_config)
 
 
-create_folder()
-create_nested_folder()
-create_job(name=folder_name)
+try:
+    info = server.get_job_info(folder_name)
+    create_job(name=folder_name)
+except Exception as e:
+    create_folder()
+    create_nested_folder()
+    create_job(name=folder_name)
