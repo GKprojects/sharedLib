@@ -440,33 +440,33 @@ def completeJmiCard(pbrAccessKey , pbrAccessKeyID){
     }
 }
 
-def alert_devops(ex){
-    try {
-        currentBuildUrl = "${currentBuild.getAbsoluteUrl()}console" ;
-        def parser = new JsonSlurper()
-        def bots = parser.parseText(env.bots_definition)
-        def url = ""
-        def message = ""
-        def headers = []
-       for (bot_name in bots.keySet()){
-            if( bot_name == "kissflow_bot" ){
-                url = "https://" + bots."${bot_name}".jmi_account_name + ".kissflow.com/integration/2/" + bots."${bot_name}".jmi_account_id + "/webhook/" + bots."${bot_name}".jmi_chat_token
-                message = '{"Message" : "Sir! I am unable to deliver the package ' + env.service + '.I want your help to recalibrate.\\n\\nWire Message - '+ ex.getMessage() + '\\n\\nYou can check the package delivery cognizance at\\n'+ currentBuildUrl +' "}';
-            }
-            else if( bot_name == "rundeck_bot" ){
-                url = "https://" + bots."${bot_name}".rundeck_domain + "/api/41/job/" + bots."${bot_name}".rundeck_job_id+ "/run"
-                message = "{\"options\": {\"Error_Message\" :\"" + ex.getMessage() + "\",\"Microservice_Name\":\"" + env.service + "\",\"BuildURL\":\"" + currentBuildUrl+"\",\"Job_Name\": \"jarvis\"}}";
-                headers = ["X-Rundeck-Auth-Token" : bots."${bot_name}".rundeck_token]
-            }
-            def postRC = make_external_request("POST",url,headers,message)
-            echo "status code for "+ bot_name + "api call: "+ postRC
-        }
-    }
-    catch(e) {
-       echo "ChatBot failed : " + e;
-    }
-}
-
+// def alert_devops(ex){
+//     try {
+//         currentBuildUrl = "${currentBuild.getAbsoluteUrl()}console" ;
+//         def parser = new JsonSlurper()
+//         def bots = parser.parseText(env.bots_definition)
+//         def url = ""
+//         def message = ""
+//         def headers = []
+//        for (bot_name in bots.keySet()){
+//             if( bot_name == "kissflow_bot" ){
+//                 url = "https://" + bots."${bot_name}".jmi_account_name + ".kissflow.com/integration/2/" + bots."${bot_name}".jmi_account_id + "/webhook/" + bots."${bot_name}".jmi_chat_token
+//                 message = '{"Message" : "Sir! I am unable to deliver the package ' + env.service + '.I want your help to recalibrate.\\n\\nWire Message - '+ ex.getMessage() + '\\n\\nYou can check the package delivery cognizance at\\n'+ currentBuildUrl +' "}';
+//             }
+//             else if( bot_name == "rundeck_bot" ){
+//                 url = "https://" + bots."${bot_name}".rundeck_domain + "/api/41/job/" + bots."${bot_name}".rundeck_job_id+ "/run"
+//                 message = "{\"options\": {\"Error_Message\" :\"" + ex.getMessage() + "\",\"Microservice_Name\":\"" + env.service + "\",\"BuildURL\":\"" + currentBuildUrl+"\",\"Job_Name\": \"jarvis\"}}";
+//                 headers = ["X-Rundeck-Auth-Token" : bots."${bot_name}".rundeck_token]
+//             }
+//             def postRC = make_external_request("POST",url,headers,message)
+//             echo "status code for "+ bot_name + "api call: "+ postRC
+//         }
+//     }
+//     catch(e) {
+//        echo "ChatBot failed : " + e;
+//     }
+// }
+//
 
 
 def make_external_request(method,url,headers,message){
