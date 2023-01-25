@@ -1,0 +1,642 @@
+import groovy.json.JsonSlurper
+
+node {
+    def buildStatus = "SUCCESS"
+
+    stage('Setup parameters') {
+            steps {
+                script {
+                    properties([
+                        parameters([
+                            choice(
+                                choices: ['account_clonev2','account-client','accountsv2','adminv2','all','analyticsv2',
+                                'analyticsmigrationv2','apidocsv2','application-client','appstorev2','appsv2','auditv2','automationv2','base-client','batchuserv2','boAll','case-client','casereportv2','casev2','channel-client','channelv2','chat-client',
+                                'chatv2','chatworkerv2','clientAll','commentv2','commonv2','communityv2','community-client','connectorv2','dataset-client','datasetv2','eventsubscriptionv2','eventworkerv2','flowv2','filetransferworkerv2','formv2','gcmv2',
+                                'indexmanagerv2','integration-client','integrationv2','list-client','lowcodev2','main-client','marketplacev2','metadatav2','notification-client','notificationv2','page-client','platform-client','postv2','process-client',
+                                'processreportv2','processv2','project-client','projectreportv2','projectv2','report-client','route','schedulerv2','search-client','searchv2','serverAll','team-client','teamv2','uploadv2','userv2','widgets-client','formreportv2',
+                                'digitalhubv2','digitalhub-client','changestreamv2','auditlogv2','documentparserv2','analyticssyncv2','analytics-client','traceworkerv2','workflowworkerv2','formworkerv2','form-client'],
+                                name: 'service'
+                            ),
+                            choice(
+                                choices: ['kf-preprod-data'],
+                                name: 'uat_data_project_id'
+                            ),
+                            choice(
+                                choices: ['kf-prd-data-p001'],
+                                name: 'prd_data_project_id'
+                            ),
+                            choice(
+                                choices: ['kf-prd-workload-p001'],
+                                name: 'prd_workload_project_id'
+                            ),
+                            booleanParam(
+                                name: 'enableClientVersioning',
+                                defaultValue: true
+                            ),
+                            choice(
+                                choices: ['uat-cs-notif-p001'],
+                                name: 'source_notification_bucket'
+                            ),
+                            choice(
+                                choices: ['altair-cs-notif-p002'],
+                                name: 'altair_notification_bucket'
+                            ),
+                            choice(
+                                choices: ['draco-cs-notif-p002'],
+                                name: 'draco_notification_bucket'
+                            ),
+                            choice(
+                                choices: ['uat-cs-static-p001'],
+                                name: 'source_static_bucket'
+                            ),
+                            choice(
+                                choices: ['altair-cs-static-p002'],
+                                name: 'altair_static_bucket'
+                            ),
+                            choice(
+                                choices: ['draco-cs-static-p002'],
+                                name: 'draco_static_bucket'
+                            ),
+                            stringParam(
+                                defaultValue: ['us-west-1'],
+                                name: '__AWS_SM_REGION_NAME'
+                            ),
+                            stringParam(
+                                defaultValue: '',
+                                name: 'instance_id'
+                            ),
+                        ])
+                    ])
+                }
+            }
+        }
+
+    try {
+        def serviceMap = [:]
+
+        stage('Clone repository') {
+            echo 'Check out the source code'
+            checkout scm
+        }
+
+        def altairClusterRegionMap = [
+            'altair-gcp-gke-cluster1-p001': 'us-central1-b',
+            'altair-gcp-gke-cluster2-p001': 'us-central1-a',
+            'altair-gcp-gke-cluster3-p001': 'us-central1-c'
+        ]
+
+        def dracoClusterRegionMap = [
+            'draco-gcp-gke-cluster1-p001': 'europe-west3-b',
+            'draco-gcp-gke-cluster2-p001': 'europe-west3-a',
+            'draco-gcp-gke-cluster3-p001': 'europe-west3-c'
+        ]
+
+        def serverServices = ["accountsv2", "auditv2", "auditlogv2", "changestreamv2",
+                    "commentv2", "datasetv2", "flowv2", "portalv2",
+                    "eventworkerv2", "processv2", "schedulerv2", 'filetransferworkerv2',
+                    "searchv2", "notificationv2", "uploadv2",
+                    "userv2", "batchuserv2", "integrationv2", "adminv2", "projectv2",
+                    "marketplacev2", "teamv2", "postv2", "gcmv2", "chatv2", "chatworkerv2", "eventsubscriptionv2",
+                    "route", "processreportv2", "lowcodev2", "casev2", "apidocsv2", "casereportv2",
+                    "commonv2", "metadatav2", "projectreportv2", "appsv2", "analyticsv2", "analyticssyncv2", "formv2",
+                    "formreportv2", "communityv2", "digitalhubv2", "documentparserv2", "workflowworkerv2", "connectorv2",
+                    "appstorev2"
+                    ]
+        def boServices = ['casev2', 'casereportv2', 'datasetv2', 'formv2', 'formreportv2', 'processv2', 'processreportv2',
+                          'projectv2', 'projectreportv2']
+        def clientServices = ["analytics-client", "base-client", "case-client", "chat-client", "list-client", "main-client", "team-client",
+                    "report-client", "account-client", "channel-client", "dataset-client",
+                    "process-client", "project-client", "widgets-client", "integration-client", "platform-client",
+                    "application-client", "page-client","community-client", "digitalhub-client", "form-client"]
+        def services = serverServices + clientServices
+        def backgroundServices = ["account_clonev2", "automationv2", "analyticsmigrationv2", "indexmanagerv2"]
+        def workerServices = ["auditlogv2", "notificationv2", "searchv2", "datasetv2", "gcmv2", "integrationv2",
+                            "flowv2", "projectv2", "tracev2", "formv2", "appstorev2"]
+        def isBackground = false
+
+        stage("Fetching build numbers from UAT"){
+            if (env.service == "all"){
+                serviceMap += get_build_number(services+backgroundServices)
+            }
+            else if (env.service == "serverAll"){
+                serviceMap += get_build_number(serverServices+backgroundServices)
+            }
+            else if (env.service == "boAll"){
+                serviceMap += get_build_number(boServices)
+            }
+            else if (env.service == "clientAll"){
+                serviceMap += get_build_number(clientServices)
+            }
+            else {
+                isBackground = (env.service in backgroundServices) ? true : false;
+                serviceMap += get_build_number([env.service])
+            }
+        }
+
+        stage("Move Image from UAT GCR to PRD GCR ") {
+            if (env.service in ["serverAll", "all"]) {
+                move_images(serviceMap, serverServices+backgroundServices)
+            }
+            else if (env.service == "boAll") {
+                move_images(serviceMap, boServices)
+            }
+            else if (env.service in serverServices+backgroundServices) {
+                move_images(serviceMap, [env.service])
+            }
+
+        }
+
+        stage('Moving translation files to altair bucket'){
+            sh "gsutil -m cp gs://"+env.source_static_bucket+"/Uat/build/translation.txt gs://"+env.altair_static_bucket+"/AltairUSP001/build/translation.txt"
+            sh "gsutil -m cp gs://"+env.source_static_bucket+"/Uat/build/translation.txt gs://"+env.draco_static_bucket+"/DracoEUP001/build/translation.txt"
+            def buildNumber = sh(script: "gsutil cat gs://"+env.source_static_bucket+"/Uat/build/translation.txt", , returnStdout: true).trim()
+            sh "gsutil -m cp -r gs://"+env.source_static_bucket+"/static/translation/"+buildNumber+"/ gs://"+env.altair_static_bucket+"/static/translation/"+buildNumber
+            sh "gsutil -m cp -r gs://"+env.source_static_bucket+"/static/translation/"+buildNumber+"/ gs://"+env.draco_static_bucket+"/static/translation/"+buildNumber
+        }
+
+        stage("Move client assets from UAT GCS to PRD GCS ") {
+            if (env.enableClientVersioning == "true") {
+                if (env.service in ["clientAll", "all"]) {
+                    move_client_service(clientServices)
+                }
+                else if (env.service in clientServices) {
+                    move_client_service([env.service])
+                }
+            }
+            else {
+                if (env.service in ["clientAll", "all"]) {
+                    move_images(serviceMap, clientServices)
+                }
+                else if (env.service in clientServices) {
+                    move_images(serviceMap, [env.service])
+                }
+            }
+        }
+
+        if (!isBackground){
+            parallel(
+                "altair":{
+                    for(String cluster: altairClusterRegionMap.keySet()) {
+                        sh "gcloud beta container clusters get-credentials "+cluster+" --region "+altairClusterRegionMap[cluster]+" --project "+env.prd_workload_project_id
+                    }
+
+                    stage('Rollout deployment to Altair') {
+                        if (env.service in ["serverAll", "all"]) {
+                            set_deployment(serviceMap, serverServices, altairClusterRegionMap, env.prd_workload_project_id)
+                            rollout_deployment(serverServices, altairClusterRegionMap, env.prd_workload_project_id)
+                        }
+                        else if (env.service == "boAll") {
+                            set_deployment(serviceMap, boServices, altairClusterRegionMap, env.prd_workload_project_id)
+                            rollout_deployment(boServices, altairClusterRegionMap, env.prd_workload_project_id)
+                        }
+                        else if (env.service in serverServices) {
+                            set_deployment(serviceMap, [env.service], altairClusterRegionMap, env.prd_workload_project_id)
+                            rollout_deployment([env.service], altairClusterRegionMap, env.prd_workload_project_id)
+                        }
+                        else if (env.enableClientVersioning == "false" && env.service in ["clientAll", "all"]) {
+                            set_deployment(serviceMap, clientServices, altairClusterRegionMap, env.prd_workload_project_id)
+                            rollout_deployment(clientServices, altairClusterRegionMap, env.prd_workload_project_id)
+                        }
+                        else if (env.enableClientVersioning == "false" && env.service in clientServices) {
+                            set_deployment(serviceMap, [env.service], altairClusterRegionMap, env.prd_workload_project_id)
+                            rollout_deployment([env.service], altairClusterRegionMap, env.prd_workload_project_id)
+                        }
+                    }
+
+                    stage("Update altair worker images") {
+                        if (env.service in ['serverAll', 'all']){
+                            set_deployment(serviceMap, workerServices, altairClusterRegionMap, env.prd_workload_project_id, true)
+                            rollout_deployment(workerServices, altairClusterRegionMap, env.prd_workload_project_id, true)
+                        }
+                        else if (env.service == "boAll"){
+                            def bo_worker_service = boServices.intersect(workerServices)
+                            set_deployment(serviceMap, bo_worker_service, altairClusterRegionMap, env.prd_workload_project_id, true)
+                            rollout_deployment(bo_worker_service, altairClusterRegionMap, env.prd_workload_project_id, true)
+                        }
+                        else if (env.service in workerServices){
+                            if (env.service == 'auditlogv2') {
+                                workerServices += ["tracev2"]
+                            }
+                            set_deployment(serviceMap, [env.service], altairClusterRegionMap, env.prd_workload_project_id, true)
+                            rollout_deployment([env.service], altairClusterRegionMap, env.prd_workload_project_id, true)
+                        }
+                    }
+
+                    stage("Update altair cron images"){
+                        def context = "gke_" + env.prd_workload_project_id + "_us-central1-b_altair-gcp-gke-cluster1-p001"
+                        if (env.service in ["serverAll", "all"]){
+                            def schedulerBuildNumber = serviceMap["schedulerv2"]
+                            def gcmBuildNumber = serviceMap["gcmv2"]
+                            def accountsBuildNumber = serviceMap["accountsv2"]
+                            def batchuserBuildNumber = serviceMap["batchuserv2"]
+                            def auditlogBuildNumber = serviceMap["auditlogv2"]
+                            sh 'kubectl set image CronJob schedulerv2-cron schedulerv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/schedulerv2-cron:'+schedulerBuildNumber+' -n altair-blue --context '+context
+                            sh 'kubectl set image CronJob accountsv2-cron accountsv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/accountsv2-cron:'+accountsBuildNumber+' -n altair-blue --context '+context
+                            sh 'kubectl set image CronJob gcmv2-cron gcmv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/gcmv2:'+gcmBuildNumber+' -n altair-blue --context '+context
+                            sh 'kubectl set image CronJob batchuserv2-cron batchuserv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/batchuserv2-cron:'+batchuserBuildNumber+' -n altair-blue --context '+context
+                            sh 'kubectl set image CronJob auditlogv2-cron auditlogv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/auditlogv2-cron:'+auditlogBuildNumber+' -n altair-blue --context '+context
+                        }else if (env.service in serverServices) {
+                            def buildNumber = serviceMap[env.service]
+                            if (env.service == "accountsv2"){
+                                sh 'kubectl set image CronJob accountsv2-cron accountsv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/accountsv2-cron:'+buildNumber+' -n altair-blue --context '+context
+                            }else if (env.service == "schedulerv2"){
+                                sh 'kubectl set image CronJob schedulerv2-cron schedulerv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/schedulerv2-cron:'+buildNumber+' -n altair-blue --context '+context
+                            }else if (env.service == "gcmv2") {
+                                sh 'kubectl set image CronJob gcmv2-cron gcmv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/gcmv2:'+buildNumber+' -n altair-blue --context '+context
+                            }else if (env.service == "batchuserv2") {
+                                sh 'kubectl set image CronJob batchuserv2-cron batchuserv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/batchuserv2-cron:'+buildNumber+' -n altair-blue --context '+context
+                            }else if (env.service == "auditlogv2") {
+                                sh 'kubectl set image CronJob auditlogv2-cron auditlogv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/auditlogv2-cron:'+buildNumber+' -n altair-blue --context '+context
+                            }
+                        }
+                    }
+                },
+                "draco": {
+                    for(String cluster: dracoClusterRegionMap.keySet()) {
+                        sh "gcloud beta container clusters get-credentials "+cluster+" --region "+dracoClusterRegionMap[cluster]+" --project "+env.prd_workload_project_id
+                    }
+
+                    stage('Rollout deployment to Draco') {
+                        if (env.service in ["serverAll", "all"]) {
+                            set_deployment(serviceMap, serverServices, dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                            rollout_deployment(serverServices, dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                        }
+                        else if (env.service == "boAll") {
+                            set_deployment(serviceMap, boServices, dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                            rollout_deployment(boServices, dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                        }
+                        else if (env.service in serverServices) {
+                            set_deployment(serviceMap, [env.service], dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                            rollout_deployment([env.service], dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                        }
+                        else if (env.enableClientVersioning == "false" && env.service in ["clientAll", "all"]) {
+                            set_deployment(serviceMap, clientServices, dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                            rollout_deployment(clientServices, dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                        }
+                        else if (env.enableClientVersioning == "false" && env.service in clientServices) {
+                            set_deployment(serviceMap, [env.service], dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                            rollout_deployment([env.service], dracoClusterRegionMap, env.prd_workload_project_id, false, "draco-blue")
+                        }
+                    }
+
+                    stage("Update draco worker images") {
+                        if (env.service in ['serverAll', 'all']) {
+                            set_deployment(serviceMap, workerServices, dracoClusterRegionMap, env.prd_workload_project_id, true, "draco-blue")
+                            rollout_deployment(workerServices, dracoClusterRegionMap, env.prd_workload_project_id, true, "draco-blue")
+                        }
+                        else if (env.service == "boAll"){
+                            def bo_worker_service = boServices.intersect(workerServices)
+                            set_deployment(serviceMap, bo_worker_service, dracoClusterRegionMap, env.prd_workload_project_id, true, "draco-blue")
+                            rollout_deployment(bo_worker_service, dracoClusterRegionMap, env.prd_workload_project_id, true, "draco-blue")
+                        }
+                        else if (env.service in workerServices) {
+                            if (env.service == 'auditlogv2') {
+                                workerServices += ["tracev2"]
+                            }
+                            set_deployment(serviceMap, [env.service], dracoClusterRegionMap, env.prd_workload_project_id, true, "draco-blue")
+                            rollout_deployment([env.service], dracoClusterRegionMap, env.prd_workload_project_id, true, "draco-blue")
+                        }
+                    }
+
+                    stage("Update draco cron images"){
+                        def context = "gke_" + env.prd_workload_project_id + "_europe-west3-b_draco-gcp-gke-cluster1-p001"
+                        if (env.service in ["serverAll", "all"]){
+                            def accountsBuildNumber = serviceMap["accountsv2"]
+                            def schedulerBuildNumber = serviceMap["schedulerv2"]
+                            def batchuserBuildNumber = serviceMap["batchuserv2"]
+                            def auditlogBuildNumber = serviceMap["auditlogv2"]
+                            sh 'kubectl set image CronJob accountsv2-cron accountsv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/accountsv2-cron:'+accountsBuildNumber+" -n draco-blue --context "+context
+                            sh 'kubectl set image CronJob schedulerv2-cron schedulerv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/schedulerv2-cron:'+schedulerBuildNumber+" -n draco-blue --context "+context
+                            sh 'kubectl set image CronJob batchuserv2-cron batchuserv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/batchuserv2-cron:'+batchuserBuildNumber+' -n draco-blue --context '+context
+                            sh 'kubectl set image CronJob auditlogv2-cron auditlogv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/auditlogv2-cron:'+auditlogBuildNumber+' -n draco-blue --context '+context
+                        }else if (env.service in serverServices) {
+                            def buildNumber = serviceMap[env.service]
+                            if (env.service == "accountsv2"){
+                                sh 'kubectl set image CronJob accountsv2-cron accountsv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/accountsv2-cron:'+buildNumber+' -n draco-blue --context '+context
+                            }else if (env.service == "schedulerv2"){
+                                sh 'kubectl set image CronJob schedulerv2-cron schedulerv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/schedulerv2-cron:'+buildNumber+" -n draco-blue --context "+context
+                            }else if (env.service == "batchuserv2") {
+                                sh 'kubectl set image CronJob batchuserv2-cron batchuserv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/batchuserv2-cron:'+buildNumber+' -n draco-blue --context '+context
+                            }else if (env.service == "auditlogv2") {
+                                sh 'kubectl set image CronJob auditlogv2-cron auditlogv2-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/auditlogv2-cron:'+buildNumber+' -n draco-blue --context '+context
+                            }
+                        }
+                    }
+                }
+            )
+
+            stage('Moving Notification assets to altair bucket'){
+                sh "gsutil -m cp -r gs://"+env.source_notification_bucket+"/Uat/notification gs://"+env.altair_notification_bucket+"/AltairUSP001/"
+                sh "gsutil -m cp -r gs://"+env.source_notification_bucket+"/Uat/notification gs://"+env.draco_notification_bucket+"/DracoEUP001/"
+            }
+
+            stage(" Api Docs Deploy "){
+                try{
+                    withPythonEnv('python3.9') {
+                        pysh 'pip3 install -r base/requirements.txt'
+                        sh 'rm -rf lib'
+                        sh 'mkdir lib'
+                        sh 'cp -rf base lib'
+                        dir(path: 'lib'){
+                            sh 'cp base/setup.py .'
+                            pysh 'python setup.py install'
+                        }
+                        dir(path: 'apidocs'){
+                            pysh 'python api_doc.py deploy_api_docs Uat AltairUSP001'
+                            pysh 'python api_doc.py deploy_api_docs Uat DracoEUP001'
+                        }
+                    }
+                }
+                finally{
+                    }
+            }
+        }
+
+        stage('BACKGROUND: Deploy cron in automation namespace') {
+            def runBackgroundServices = (env.service in ['serverAll', 'all']) ? ['automationv2', 'indexmanagerv2']
+                                        : (env.service in ['automationv2', 'indexmanagerv2']) ? [env.service] : null
+            if (runBackgroundServices) {
+                update_cron(serviceMap, runBackgroundServices, 'automation-p001')
+                update_cron(serviceMap, runBackgroundServices, 'automation-p001', '_europe-west3-b_draco-gcp-gke-cluster1-p001')
+            }
+        }
+
+        stage("Save build numbers to Google Cloud Storage "){
+            for (def key : serviceMap.keySet()){
+                sh "echo "+serviceMap[key]+" > /var/lib/jenkins/builds/"+env.BUILD_NUMBER+"-"+key+".txt"
+                sh "gsutil -m cp /var/lib/jenkins/builds/"+env.BUILD_NUMBER+"-"+key+".txt gs://kf-prd-builds/4.0/latest/"+key+".txt"
+            }
+            sh "gsutil -m cp -r gs://kf-prd-builds/4.0/latest/* gs://kf-prd-builds/4.0/"+env.BUILD_NUMBER+"/"
+            sh "rm /var/lib/jenkins/builds/"+env.BUILD_NUMBER+"-*.txt"
+        }
+
+        stage('Triggering Eldar Deployment') {
+            build job: "eldarDeploy", propagate: false, wait: false, parameters: [string(name: 'service', value:env.service)]
+        }
+    }
+    catch(e) {
+        echo "Exception occured "+ e;
+        buildStatus = "FAILURE"
+        alert_devops(e)
+        throw e
+    }
+    finally {
+        withCredentials([string(credentialsId: 'pbrAccessKey', variable: 'pbrAccessKey'),string(credentialsId: 'pbrAccessKeyID', variable: 'pbrAccessKeyID')]) {
+            if (env.instance_id) {
+                if (buildStatus == "SUCCESS") {
+                    updateJmiCard(pbrAccessKey, pbrAccessKeyID)
+                    completeJmiCard(pbrAccessKey, pbrAccessKeyID)
+                }
+            }
+            else {
+                echo "This build is triggered manually"
+            }
+        }
+    }
+}
+
+def updateJmiCard(pbrAccessKey , pbrAccessKeyID){
+    try {
+
+        def buildStartTime = new Date( currentBuild.startTimeInMillis ).format("yyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))
+        def buildEndTimeMilliSeconds = currentBuild.startTimeInMillis + currentBuild.duration
+        def buildEndTime = new Date( buildEndTimeMilliSeconds ).format("yyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))
+        def buildEndTimeIST = new Date( buildEndTimeMilliSeconds ).format("dd-MM-yyyy HH:mm:ss", TimeZone.getTimeZone('IST'))
+        def parser = new JsonSlurper()
+        def bots = parser.parseText(env.bots_definition)
+        def url = "https://" + bots."kissflow_bot".jmi_account_name+ ".kissflow.com/process/2/" + bots."kissflow_bot".jmi_account_id  + "/admin/" + bots."kissflow_bot".jmi_process_name + "/${env.instance_id}";
+        def message = '{ "Deployer_Comment": "Sir! I have successfully delivered the package ' + env.service + ' at the destination. Package delivery number is ' + currentBuild.number+ ' & package is delivered at '+  buildEndTimeIST + '. As always, Sir, a great pleasure watching you work!", "Deployed_At": "' + "${buildStartTime}" + '" ,"Altair_Build_Datetime": "' +  "${buildEndTime}" + '","Deployed_By": {"_id":"'+ "${env.jmi_process_user_id}" + '"},"Altair_Build_Number": "' + "${currentBuild.number}" + '","Rollback_Build_Number_1": "' + "${currentBuild.previousSuccessfulBuild.number}" +'"}';
+        def headers = [
+                "X-Access-Key-Id" : "${pbrAccessKeyID}",
+                "X-Access-Key-Secret" : "${pbrAccessKey}"
+        ];
+        def putRC = make_external_request("PUT",url,headers,message);
+        return putRC
+    }
+    catch(e) {
+        echo "update PBR failed with : " + e;
+        buildStatus = "FAILURE"
+        alert_devops(e);
+        throw e
+    }
+}
+
+def completeJmiCard(pbrAccessKey , pbrAccessKeyID){
+    try {
+            def parser = new JsonSlurper()
+            def bots = parser.parseText(env.bots_definition)
+            def url = "https://" + bots."kissflow_bot".jmi_account_name+ ".kissflow.com/process/2/" + bots."kissflow_bot".jmi_account_id  + "/admin/" + bots."kissflow_bot".jmi_process_name + "/${env.instance_id}/complete"
+            def headers = [
+                "X-Access-Key-Id" : "${pbrAccessKeyID}",
+                "X-Access-Key-Secret" : "${pbrAccessKey}"
+            ]
+            def postRC = make_external_request("POST",url,headers,"")
+            return postRC;
+    }
+    catch(e) {
+        echo "Complete PBR failed with : " + e;
+        buildStatus = "FAILURE"
+        alert_devops(e);
+        throw e
+    }
+}
+
+def alert_devops(ex){
+    try {
+        currentBuildUrl = "${currentBuild.getAbsoluteUrl()}console" ;
+        def parser = new JsonSlurper()
+        def bots = parser.parseText(env.bots_definition)
+        def url = ""
+        def message = ""
+        def headers = []
+       for (bot_name in bots.keySet()){
+            if( bot_name == "kissflow_bot" ){
+                url = "https://" + bots."${bot_name}".jmi_account_name + ".kissflow.com/integration/2/" + bots."${bot_name}".jmi_account_id + "/webhook/" + bots."${bot_name}".jmi_chat_token
+                message = '{"Message" : "Sir! I am unable to deliver the package ' + env.service + '.I want your help to recalibrate.\\n\\nWire Message - '+ ex.getMessage() + '\\n\\nYou can check the package delivery cognizance at\\n'+ currentBuildUrl +' "}';
+            }
+            else if( bot_name == "rundeck_bot" ){
+                url = "https://" + bots."${bot_name}".rundeck_domain + "/api/41/job/" + bots."${bot_name}".rundeck_job_id+ "/run"
+                message = "{\"options\": {\"Error_Message\" :\"" + ex.getMessage() + "\",\"Microservice_Name\":\"" + env.service + "\",\"BuildURL\":\"" + currentBuildUrl+"\",\"Job_Name\": \"jarvis\"}}";
+                headers = ["X-Rundeck-Auth-Token" : bots."${bot_name}".rundeck_token]
+            }
+            def postRC = make_external_request("POST",url,headers,message)
+            echo "status code for "+ bot_name + "api call: "+ postRC
+        }
+    }
+    catch(e) {
+       echo "ChatBot failed : " + e;
+    }
+}
+
+
+
+def make_external_request(method,url,headers,message){
+    def req = new URL(url).openConnection();
+    req.setRequestMethod(method);
+    reqMessage = message
+    req.setDoOutput(true);
+    req.setRequestProperty('Content-Type', 'application/json');
+    headers.each { req.setRequestProperty("$it.key", "$it.value"); }
+    req.connect();
+    req.getOutputStream().write(reqMessage.getBytes("UTF-8"));
+    def reqRC = req.getResponseCode();
+    return reqRC;
+}
+
+def get_build_number(jobs) {
+    def buildMap = [:]
+    for(String job: jobs) {
+        def buildNumber = sh(script: "gsutil cat gs://kf-dev-builds/uat-cluster/4.0/"+job+".txt", , returnStdout: true).trim()
+        buildMap.put(job, buildNumber)
+        if (job == 'auditlogv2') {
+            buildMap.put('tracev2', buildNumber)
+        }
+    }
+    return buildMap
+}
+
+def move_images(serviceMap, services) {
+    for(String service: services) {
+        def buildNumber = serviceMap[service]
+        service = (service in ["automationv2", "indexmanagerv2"]) ? service+"-cron" : service
+        sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/"+service+":"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/"+service+":"+buildNumber
+        sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/"+service+":"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/"+service+":latest"
+        if (service == "auditlogv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/auditlogworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/auditlogworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/auditlogworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/auditlogworkerv2:latest"
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/traceworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/traceworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/traceworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/traceworkerv2:latest"
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/auditlogv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/auditlogv2-cron:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/auditlogv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/auditlogv2-cron:latest"
+        }else if (service == "accountsv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/accountsv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/accountsv2-cron:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/accountsv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/accountsv2-cron:latest"
+        }else if (service == "batchuserv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/batchuserv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/batchuserv2-cron:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/batchuserv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/batchuserv2-cron:latest"
+        }else if (service == "schedulerv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/schedulerv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/schedulerv2-cron:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/schedulerv2-cron:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/schedulerv2-cron:latest"
+        }else if (service == "notificationv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/notificationworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/notificationworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/notificationworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/notificationworkerv2:latest"
+        }else if (service == "searchv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/searchworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/searchworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/searchworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/searchworkerv2:latest"
+        }else if (service == "datasetv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/datasetworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/datasetworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/datasetworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/datasetworkerv2:latest"
+        }else if (service == "integrationv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/integrationworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/integrationworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/integrationworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/integrationworkerv2:latest"
+        }else if (service == "gcmv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/gcmv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/gcmv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/gcmv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/gcmv2:latest"
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/gcmworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/gcmworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/gcmworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/gcmworkerv2:latest"
+        }else if (service == "flowv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/flowworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/flowworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/flowworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/flowworkerv2:latest"
+        }else if (service == "projectv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/projectworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/projectworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/projectworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/projectworkerv2:latest"
+        }else if (service == "formv2"){
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/formworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/formworkerv2:"+buildNumber
+            sh "echo y | gcloud container images add-tag gcr.io/"+env.uat_data_project_id+"/kissflow/formworkerv2:"+buildNumber+" gcr.io/"+env.prd_data_project_id+"/kissflow/formworkerv2:latest"
+        }
+    }
+}
+
+def set_deployment(serviceMap, services, clusterRegionMap, project, isWorker=false, namespace="altair-blue") {
+    for(String service: services) {
+        def buildNumber = serviceMap[service]
+        def imagePathSuffix = service
+        if (namespace == "draco-blue" && service in ["gcmv2"]) {
+            continue
+        }
+        if (isWorker) {
+            service = service.substring(0, service.length()-2)+"workerv2"
+            // Todo: remove this once Mani6027 is done with generalization
+            imagePathSuffix = (service in ["appstoreworkerv2"]) ? imagePathSuffix : service
+        }
+        for(String cluster: clusterRegionMap.keySet()) {
+            def retryAttempt = 0
+            retry(3) {
+                if (retryAttempt > 0) {
+                    sleep(30 * retryAttempt)
+                }
+                retryAttempt = retryAttempt + 1
+                try {
+                    def context = "gke_" + project + "_" + clusterRegionMap[cluster] + "_" + cluster
+                    echo "Image Updating Service : "+service+" Build Number : "+buildNumber+" Context : "+context
+                    sh 'kubectl set image deployment '+service+'-service '+service+'=gcr.io/'+env.prd_data_project_id+'/kissflow/'+imagePathSuffix+':'+buildNumber+' -n '+namespace+' --context '+context
+                    if (service == "processv2") {
+                        echo "Image Updating Service : processinternalv2-service"
+                        sh 'kubectl set image deployment processinternalv2-service processinternalv2=gcr.io/'+env.prd_data_project_id+'/kissflow/'+service+':'+buildNumber+' -n '+namespace+' --context '+context
+                    }
+                }
+                catch(e) {
+                    sh "gcloud beta container clusters get-credentials "+cluster+" --region "+clusterRegionMap[cluster]+" --project "+project
+                    throw e
+                }
+            }
+        }
+    }
+}
+
+def rollout_deployment(services, clusterRegionMap, project, isWorker=false, namespace="altair-blue") {
+    for(String service: services) {
+        if (namespace == "draco-blue" && service in ["gcmv2"]) {
+            continue
+        }
+        if (isWorker) {
+            service = service.substring(0, service.length()-2)+"workerv2"
+        }
+        for(String cluster: clusterRegionMap.keySet()) {
+            def retryAttempt = 0
+            retry(3) {
+                if (retryAttempt > 0) {
+                    sleep(30 * retryAttempt)
+                }
+                retryAttempt = retryAttempt + 1
+                try {
+                    def context = "gke_" + project + "_" + clusterRegionMap[cluster] + "_" + cluster
+                    echo "Roll out service : " + service
+                    sh 'kubectl rollout status deployment '+service+'-service -n '+namespace+' --context '+context
+                    if (service == "processv2") {
+                        echo "Roll out service : processinternalv2-service"
+                        sh 'kubectl rollout status deployment processinternalv2-service -n '+namespace+' --context '+context
+                    }
+                }
+                catch(e) {
+                    sh "gcloud beta container clusters get-credentials "+cluster+" --region "+clusterRegionMap[cluster]+" --project "+project
+                    throw e
+                }
+            }
+        }
+    }
+}
+
+def update_cron(serviceBuildNumber, services, namespace="altair-blue", context="_us-central1-b_altair-gcp-gke-cluster1-p001") {
+    context = "gke_" + env.prd_workload_project_id + context
+    for (String service: services) {
+        sh 'kubectl set image CronJob '+service+'-cron '+service+'-cron=gcr.io/'+env.prd_data_project_id+'/kissflow/'+service+'-cron:'+serviceBuildNumber[service]+' -n '+namespace+' --context '+context
+    }
+}
+
+def move_client_service(services) {
+    def services_list = []
+    for(String service: services) {
+        service = service.substring(0, service.length()-7)
+        def buildNumber = sh(script: "gsutil cat gs://"+env.source_static_bucket+"/Uat/build/"+service+".txt", , returnStdout: true).trim()
+        echo "Service : "+service+"-client Build Number : "+buildNumber
+        sh "gsutil -m cp gs://"+env.source_static_bucket+"/Uat/build/"+service+".txt gs://"+env.altair_static_bucket+"/AltairUSP001/build/"+service+".txt"
+        sh "gsutil -m cp gs://"+env.source_static_bucket+"/Uat/build/"+service+".txt gs://"+env.draco_static_bucket+"/DracoEUP001/build/"+service+".txt"
+        sh "gsutil -m cp -r gs://"+env.source_static_bucket+"/static/"+service+"/"+buildNumber+"/ gs://"+env.altair_static_bucket+"/static/"+service+"/"
+        sh "gsutil -m cp -r gs://"+env.source_static_bucket+"/static/"+service+"/"+buildNumber+"/ gs://"+env.draco_static_bucket+"/static/"+service+"/"
+        services_list.add(service)
+    }
+    echo "Triggering devAssetVersioning job"
+    build job: 'devAssetVersioning', propagate: true, wait: true, parameters: [string(name: 'repository', value:'OrangeScape'), string(name: 'branch', value:'new-master'), string(name: 'secret_env', value: "AltairUSP001"), string(name: 'service', value: services_list.join(',')), string(name: 'static_bucket', value: env.altair_static_bucket)]
+    sh 'gsutil -m cp -r gs://'+env.altair_static_bucket+'/AltairUSP001/* gs://'+env.draco_static_bucket+'/DracoEUP001'
+}
