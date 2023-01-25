@@ -2,74 +2,73 @@ import groovy.json.JsonSlurper
 
 node {
     def buildStatus = "SUCCESS"
-
-    stage('Setup parameters') {
-            steps {
-                script {
-                    properties([
-                        parameters([
-                            choice(
-                                choices: ['account_clonev2','account-client','accountsv2','adminv2','all','analyticsv2',
-                                'analyticsmigrationv2','apidocsv2','application-client','appstorev2','appsv2','auditv2','automationv2','base-client','batchuserv2','boAll','case-client','casereportv2','casev2','channel-client','channelv2','chat-client',
-                                'chatv2','chatworkerv2','clientAll','commentv2','commonv2','communityv2','community-client','connectorv2','dataset-client','datasetv2','eventsubscriptionv2','eventworkerv2','flowv2','filetransferworkerv2','formv2','gcmv2',
-                                'indexmanagerv2','integration-client','integrationv2','list-client','lowcodev2','main-client','marketplacev2','metadatav2','notification-client','notificationv2','page-client','platform-client','postv2','process-client',
-                                'processreportv2','processv2','project-client','projectreportv2','projectv2','report-client','route','schedulerv2','search-client','searchv2','serverAll','team-client','teamv2','uploadv2','userv2','widgets-client','formreportv2',
-                                'digitalhubv2','digitalhub-client','changestreamv2','auditlogv2','documentparserv2','analyticssyncv2','analytics-client','traceworkerv2','workflowworkerv2','formworkerv2','form-client'],
-                                name: 'service'
-                            ),
-                            choice(
-                                choices: ['kf-preprod-data'],
-                                name: 'uat_data_project_id'
-                            ),
-                            choice(
-                                choices: ['kf-prd-data-p001'],
-                                name: 'prd_data_project_id'
-                            ),
-                            choice(
-                                choices: ['kf-prd-workload-p001'],
-                                name: 'prd_workload_project_id'
-                            ),
-                            booleanParam(
-                                name: 'enableClientVersioning',
-                                defaultValue: true
-                            ),
-                            choice(
-                                choices: ['uat-cs-notif-p001'],
-                                name: 'source_notification_bucket'
-                            ),
-                            choice(
-                                choices: ['altair-cs-notif-p002'],
-                                name: 'altair_notification_bucket'
-                            ),
-                            choice(
-                                choices: ['draco-cs-notif-p002'],
-                                name: 'draco_notification_bucket'
-                            ),
-                            choice(
-                                choices: ['uat-cs-static-p001'],
-                                name: 'source_static_bucket'
-                            ),
-                            choice(
-                                choices: ['altair-cs-static-p002'],
-                                name: 'altair_static_bucket'
-                            ),
-                            choice(
-                                choices: ['draco-cs-static-p002'],
-                                name: 'draco_static_bucket'
-                            ),
-                            stringParam(
-                                defaultValue: ['us-west-1'],
-                                name: '__AWS_SM_REGION_NAME'
-                            ),
-                            stringParam(
-                                defaultValue: '',
-                                name: 'instance_id'
-                            ),
-                        ])
-                    ])
-                }
-            }
-        }
+//     stage('Setup parameters') {
+//             steps {
+//                 script {
+//                     properties([
+//                         parameters([
+//                             choice(
+//                                 choices: ['account_clonev2','account-client','accountsv2','adminv2','all','analyticsv2',
+//                                 'analyticsmigrationv2','apidocsv2','application-client','appstorev2','appsv2','auditv2','automationv2','base-client','batchuserv2','boAll','case-client','casereportv2','casev2','channel-client','channelv2','chat-client',
+//                                 'chatv2','chatworkerv2','clientAll','commentv2','commonv2','communityv2','community-client','connectorv2','dataset-client','datasetv2','eventsubscriptionv2','eventworkerv2','flowv2','filetransferworkerv2','formv2','gcmv2',
+//                                 'indexmanagerv2','integration-client','integrationv2','list-client','lowcodev2','main-client','marketplacev2','metadatav2','notification-client','notificationv2','page-client','platform-client','postv2','process-client',
+//                                 'processreportv2','processv2','project-client','projectreportv2','projectv2','report-client','route','schedulerv2','search-client','searchv2','serverAll','team-client','teamv2','uploadv2','userv2','widgets-client','formreportv2',
+//                                 'digitalhubv2','digitalhub-client','changestreamv2','auditlogv2','documentparserv2','analyticssyncv2','analytics-client','traceworkerv2','workflowworkerv2','formworkerv2','form-client'],
+//                                 name: 'service'
+//                             ),
+//                             choice(
+//                                 choices: ['kf-preprod-data'],
+//                                 name: 'uat_data_project_id'
+//                             ),
+//                             choice(
+//                                 choices: ['kf-prd-data-p001'],
+//                                 name: 'prd_data_project_id'
+//                             ),
+//                             choice(
+//                                 choices: ['kf-prd-workload-p001'],
+//                                 name: 'prd_workload_project_id'
+//                             ),
+//                             booleanParam(
+//                                 name: 'enableClientVersioning',
+//                                 defaultValue: true
+//                             ),
+//                             choice(
+//                                 choices: ['uat-cs-notif-p001'],
+//                                 name: 'source_notification_bucket'
+//                             ),
+//                             choice(
+//                                 choices: ['altair-cs-notif-p002'],
+//                                 name: 'altair_notification_bucket'
+//                             ),
+//                             choice(
+//                                 choices: ['draco-cs-notif-p002'],
+//                                 name: 'draco_notification_bucket'
+//                             ),
+//                             choice(
+//                                 choices: ['uat-cs-static-p001'],
+//                                 name: 'source_static_bucket'
+//                             ),
+//                             choice(
+//                                 choices: ['altair-cs-static-p002'],
+//                                 name: 'altair_static_bucket'
+//                             ),
+//                             choice(
+//                                 choices: ['draco-cs-static-p002'],
+//                                 name: 'draco_static_bucket'
+//                             ),
+//                             stringParam(
+//                                 defaultValue: ['us-west-1'],
+//                                 name: '__AWS_SM_REGION_NAME'
+//                             ),
+//                             stringParam(
+//                                 defaultValue: '',
+//                                 name: 'instance_id'
+//                             ),
+//                         ])
+//                     ])
+//                 }
+//             }
+//         }
 
     try {
         def serviceMap = [:]
