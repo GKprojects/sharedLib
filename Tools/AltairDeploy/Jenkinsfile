@@ -21,7 +21,7 @@ node {
                                 name: 'service'
                             ),
                             choice(
-                                choices: ['kf-prd-data-p001'],
+                                choices: ['kf-prd-data-p001''testing',],
                                 name: 'prd_data_project_id'
                             ),
                             choice(
