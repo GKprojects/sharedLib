@@ -17,7 +17,7 @@ node {
                                 name: 'service'
                             ),
                             choice(
-                                choices: ['kf-preprod-data''testing',],
+                                choices: ['kf-preprod-data''testing','testing',],
                                 name: 'uat_data_project_id'
                             ),
                             choice(
