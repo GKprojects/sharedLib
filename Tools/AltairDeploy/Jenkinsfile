@@ -8,7 +8,7 @@ node {
                     properties([
                         parameters([
                             choice(
-                                name: 'service'
+                                name: 'service',
                                 choices: ['account_clonev2','account-client','accountsv2','adminv2','all','analyticsv2',
                                 'analyticsmigrationv2','apidocsv2','application-client','appstorev2','appsv2','auditv2','automationv2','base-client','batchuserv2','boAll','case-client','casereportv2','casev2','channel-client','channelv2','chat-client',
                                 'chatv2','chatworkerv2','clientAll','commentv2','commonv2','communityv2','community-client','connectorv2','dataset-client','datasetv2','eventsubscriptionv2','eventworkerv2','flowv2','filetransferworkerv2','formv2','gcmv2',
