@@ -20,10 +20,6 @@ name_elements = root.findall('.definition/scm/branches/hudson.plugins.git.Branch
 for name_element in name_elements:
     name_element.text = '*/main'
 
-script_path_elements = root.findall('./definition/scriptPath')
-for script_path_element in script_path_elements:
-    script_path_element.text = 'Tools/cleanup_pods/Jenkinsfile'
-
 folder_name = ns
 jenkins_url = f'https://seaeagle.zingworks.com/'
 subfolder_name = "Tools"
@@ -51,9 +47,21 @@ def create_nested_folder():
     server.create_folder(subfolder_name)
 
 
-def create_job(name):
+def create_job_deletecron(name):
+    script_path_elements = root.findall('./definition/scriptPath')
+    for script_path_element in script_path_elements:
+        script_path_element.text = 'Tools/cleanup_pods/Jenkinsfile'
     jenkins_url2 = f'https://seaeagle.zingworks.com/job/{name}/job/{subfolder_name}/'
     server = jenkins.Jenkins(jenkins_url2, username=jenkins_username, password=jenkins_password)
+    server.create_job(job_name, job_config)
+
+
+def create_job_crashloop(name):
+    script_path_elements = root.findall('./definition/scriptPath')
+    for script_path_element in script_path_elements:
+        script_path_element.text = 'Tools/CrashLoopBackOff/Jenkinsfile'
+    jenkins_url3 = f'https://seaeagle.zingworks.com/job/{name}/job/{subfolder_name}/'
+    server = jenkins.Jenkins(jenkins_url3, username=jenkins_username, password=jenkins_password)
     server.create_job(job_name, job_config)
 
 
@@ -64,10 +72,11 @@ try:
     if server.job_exists(job_name):
         server.reconfig_job(job_name, job_config)
     else:
-        create_job(name=folder_name)
+        create_job_deletecron(name=folder_name)
+        create_job_crashloop(name=folder_name)
 
 except Exception as e:
     create_folder()
     create_nested_folder()
-    create_job(name=folder_name)
-
+    create_job_deletecron(name=folder_name)
+    create_job_crashloop(name=folder_name)
