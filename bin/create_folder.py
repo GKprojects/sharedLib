@@ -23,7 +23,6 @@ for name_element in name_elements:
 folder_name = ns
 jenkins_url = f'https://seaeagle.zingworks.com/'
 subfolder_name = "Tools"
-job_name = "cleanup_pods"
 job_config = ET.tostring(root, encoding="unicode")
 jenkins_username = os.environ["jenkins_user"]
 jenkins_password = os.environ["jenkins_pwd"]
@@ -48,6 +47,7 @@ def create_nested_folder():
 
 
 def create_job_deletecron(name):
+    job_name = "cleanup_cronjobs"
     script_path_elements = root.findall('./definition/scriptPath')
     for script_path_element in script_path_elements:
         script_path_element.text = 'Tools/cleanup_pods/Jenkinsfile'
@@ -57,6 +57,7 @@ def create_job_deletecron(name):
 
 
 def create_job_crashloop(name):
+    job_name = "crash_loop_pods_cleanup"
     script_path_elements = root.findall('./definition/scriptPath')
     for script_path_element in script_path_elements:
         script_path_element.text = 'Tools/CrashLoopBackOff/Jenkinsfile'
