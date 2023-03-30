@@ -11,7 +11,7 @@ filename = "templates.xml"
 filepath = os.path.join(folder, filename)
 tree = ET.parse(filepath)
 root = tree.getroot()
-
+job_name = ""
 url_elements = root.findall('.definition/scm/userRemoteConfigs/hudson.plugins.git.UserRemoteConfig/url')
 for url_element in url_elements:
     url_element.text = 'git@github.com:kf-avengers/kf-jenkins.git'
