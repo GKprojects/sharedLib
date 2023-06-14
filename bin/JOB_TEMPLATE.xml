@@ -1,31 +1,31 @@
-<flow-definition plugin="workflow-job@1254.v3f64639b_11dd">
+<flow-definition plugin="workflow-job@1308.v58d48a_763b_31">
 <description/>
 <keepDependencies>false</keepDependencies>
 <properties>
-<com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@1.34">
+<com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@320.v5a_0933a_e7d61">
 <autoRebuild>false</autoRebuild>
 <rebuildDisabled>false</rebuildDisabled>
 </com.sonyericsson.rebuild.RebuildSettings>
 </properties>
-<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@3583.v4f58de0d78d5">
-<scm class="hudson.plugins.git.GitSCM" plugin="git@5.0.0">
+<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@3691.v28b_14c465a_b_b_">
+<scm class="hudson.plugins.git.GitSCM" plugin="git@5.1.0">
 <configVersion>2</configVersion>
 <userRemoteConfigs>
 <hudson.plugins.git.UserRemoteConfig>
-<url>{{ job_repo }}</url>
-<credentialsId>rammanokar_github</credentialsId>
+<url>{git_repo_url}</url>
+<credentialsId>{git_credential}</credentialsId>
 </hudson.plugins.git.UserRemoteConfig>
 </userRemoteConfigs>
 <branches>
 <hudson.plugins.git.BranchSpec>
-<name>{{ job_branch_name }}</name>
+<name>{git_branch}</name>
 </hudson.plugins.git.BranchSpec>
 </branches>
 <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
 <submoduleCfg class="empty-list"/>
 <extensions/>
 </scm>
-<scriptPath>{{ job_script_path }}</scriptPath>
+<scriptPath>{jenkins_file_path}</scriptPath>
 <lightweight>true</lightweight>
 </definition>
 <triggers/>
