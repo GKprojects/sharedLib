@@ -5,8 +5,9 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'Deployment', choices: getDeploymentNames.kf4(), description: 'Deployment Name')
-        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list')
+        choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
+        
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
     stages {
@@ -33,17 +34,15 @@ pipeline {
         }
         stage('Restart Deployment') {
             steps {
-                script {
-                    // Extract the cluster and namespace from the Jenkins folder name
-                    def folderName = env.JOB_NAME.split('/')[0]
-                    def (cluster, namespace) = folderName.tokenize('-')
-                    
                     // Activate the environment variables and generate the kubeconfig
-                    sh "source activate $clusterNS ${params.clusterID}"
+                    sh """#!/usr/bin/env bash
+                    cd kf-configs
+                    source activate $clusterNS ${params.clusterID}
 
                     // Restart the selected deployment
-                    sh "kubectl rollout restart deployment/${params.Deployment}"
-                }
+                    kubectl rollout restart deployment/${params.Deployment}-service
+                    """
+                
             }
         }
     }
