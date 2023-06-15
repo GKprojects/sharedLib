@@ -8,15 +8,16 @@ import os
 
 def prepare_xml(template_file, jenkins_file_path):
     template_xml = Path(template_file).read_text()
-    git_repo_url = os.getenv(
-        "KF_JENKINS_GIT_REPO_URL", "git@github.com:kf-avengers/kf-jenkins.git"
-    )
-    git_credential = os.environ["KF_JENKINS_GIT_CREDENTIAL"]
-    git_branch = os.getenv("KF_JENKINS_GIT_BRANCH", "main")
-    template_xml = template_xml.replace("{git_repo_url}", git_repo_url)
-    template_xml = template_xml.replace("{git_credential}", git_credential)
-    template_xml = template_xml.replace("{git_branch}", git_branch)
-    template_xml = template_xml.replace("{jenkins_file_path}", jenkins_file_path+"/Jenkinsfile")
+    replacements = {
+        "{git_repo_url}": os.getenv("KF_JENKINS_GIT_REPO_URL", "git@github.com:kf-avengers/kf-jenkins.git"),
+        "{git_credential}": os.environ["KF_JENKINS_GIT_CREDENTIAL"],
+        "{git_branch}": os.getenv("KF_JENKINS_GIT_BRANCH", "main"),
+        "{jenkins_file_path}": jenkins_file_path + "/Jenkinsfile",
+    }
+
+    for key, value in replacements.items():
+        template_xml = template_xml.replace(key, value)
+
     return template_xml
 
 
