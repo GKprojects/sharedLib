@@ -5,16 +5,8 @@ pipeline {
     agent any
 
     parameters {
-        choice(
-            name: 'DEPLOYMENT_NAME',
-            choices: getDeploymentNames.kf4(),
-            description: 'Select the deployment to restart'
-        )
-        choice(
-            name: 'CLUSTER_ID',
-            choices: ['1', '2', '3'],
-            description: 'Select the cluster ID'
-        )
+        choice(name: 'Deployment', choices: getDeploymentNames.kf4(), description: 'Deployment Name')
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list')
     }
 
     stages {
@@ -47,10 +39,10 @@ pipeline {
                     def (cluster, namespace) = folderName.tokenize('-')
                     
                     // Activate the environment variables and generate the kubeconfig
-                    sh "source activate $clusterNS ${params.CLUSTER_ID}"
+                    sh "source activate $clusterNS ${params.clusterID}"
 
                     // Restart the selected deployment
-                    sh "kubectl rollout restart deployment/${params.DEPLOYMENT_NAME}"
+                    sh "kubectl rollout restart deployment/${params.Deployment}"
                 }
             }
         }
