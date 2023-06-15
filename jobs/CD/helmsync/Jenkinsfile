@@ -42,13 +42,13 @@ pipeline {
                             source activate  \$cluster
                             make charts 
                             cd \$CHART_DIR #tochart
-                            echo ./bin/deploy/kf-service-ns-resources.sh
+                                ./bin/deploy/kf-service-ns-resources.sh
                             if [[ \$clusters == *"2"* || \$cluster == *"3"* ]]; then
                                 echo "Skipping Cronjob helm deploy since it's cluster \$cluster"
                             else
-                                echo ./bin/deploy/kf-cronjobs.sh
+                                ./bin/deploy/kf-cronjobs.sh
                             fi
-                            echo ./bin/deploy/kf-service.sh
+                            ./bin/deploy/kf-service.sh
                             cd \$ROOT_DIR #toroot
                         done
                     """
