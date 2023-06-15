@@ -14,7 +14,7 @@ pipeline {
                 echo "NS variable is set to: ${clusterNS}"
             }
         }
-        stage('Clone Chart') {
+        stage('Clone KF configs') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
                     sh '''#!/usr/bin/env bash

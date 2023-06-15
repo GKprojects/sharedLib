@@ -1,0 +1,58 @@
+@Library('sharedLib@main') _
+def clusterNS
+
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'DEPLOYMENT_NAME',
+            choices: getDeploymentNames.kf4(),
+            description: 'Select the deployment to restart'
+        )
+        choice(
+            name: 'CLUSTER_ID',
+            choices: ['1', '2', '3'],
+            description: 'Select the cluster ID'
+        )
+    }
+
+    stages {
+        stage('Set NS variable') {
+            steps {
+                script {
+                    // Get the parent of the parent-folder of the job
+                    clusterNS = env.JOB_NAME.split('/')[0]
+                    env.clusterNS = clusterNS
+                }
+                echo "NS variable is set to: ${clusterNS}"
+            }
+        }
+        stage('Clone KF configs') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
+                    sh '''#!/usr/bin/env bash
+                    export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
+                    rm -rf kf-configs
+                    git clone git@github.com:OrangeScape/kf-configs.git
+                    '''
+                }
+            }
+        }
+        stage('Restart Deployment') {
+            steps {
+                script {
+                    // Extract the cluster and namespace from the Jenkins folder name
+                    def folderName = env.JOB_NAME.split('/')[0]
+                    def (cluster, namespace) = folderName.tokenize('-')
+                    
+                    // Activate the environment variables and generate the kubeconfig
+                    sh "source activate $clusterNS ${params.CLUSTER_ID}"
+
+                    // Restart the selected deployment
+                    sh "kubectl rollout restart deployment/${params.DEPLOYMENT_NAME}"
+                }
+            }
+        }
+    }
+}
