@@ -76,7 +76,7 @@ def main():
         print("Error in Connecting to Jenkins server", jenkins_url)
         print(e)
         exit(1)
-        
+
     try:
         server.delete_job(jenkins_parent_folder)
     except:
@@ -89,7 +89,7 @@ def main():
     create_jenkins_folder(server, folders_list)
     create_jenkins_job(server, jobs_list, jenkins_parent_folder, template_file)
     print("All set, Jenkins jobs are configured successfully.")
-    print("Jobs Folder url:", jenkins_url+"/"+jenkins_parent_folder)
+    print("Jobs Folder url:", jenkins_url+"/job/"+jenkins_parent_folder)
 
 if __name__ == "__main__":
     main()
