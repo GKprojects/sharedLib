@@ -2,7 +2,6 @@
 import os
 import jenkins
 from pathlib import Path
-import dotenv
 import getpass
 from pathlib import Path
 import os
@@ -18,7 +17,7 @@ def prepare_xml(template_file, jenkins_file_path):
     template_xml = template_xml.replace("{git_repo_url}", git_repo_url)
     template_xml = template_xml.replace("{git_credential}", git_credential)
     template_xml = template_xml.replace("{git_branch}", git_branch)
-    template_xml= template_xml.replace("{jenkins_file_path}", jenkins_file_path)
+    template_xml = template_xml.replace("{jenkins_file_path}", jenkins_file_path+"/Jenkinsfile")
     return template_xml
 
 
@@ -28,22 +27,25 @@ def create_jenkins_folder(server: jenkins.Jenkins, folders_list: list):
         server.create_job(folder, jenkins.EMPTY_FOLDER_XML)
 
 
-def create_jenkins_job(server: jenkins.Jenkins, jobs_list: list,jenkins_parent_folder, template_file):
+def create_jenkins_job(
+    server: jenkins.Jenkins, jobs_list: list, jenkins_parent_folder, template_file
+):
     for job in jobs_list:
-        template_xml = prepare_xml(template_file, job.replace(jenkins_parent_folder, "jobs"))
+        template_xml = prepare_xml(
+            template_file, job.replace(jenkins_parent_folder, "jobs")
+        )
         server.create_job(job, template_xml)
 
 
-
-def populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder):
+def populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder, jenkins_parent_folder):
     for root, dirs, files in os.walk(jobs_folder):
         if "Jenkinsfile" in files:
-            jobs_list.append(root.replace(jobs_folder, "altair"))
+            jobs_list.append(root.replace(jobs_folder, jenkins_parent_folder))
         else:
             # exclude jobs folder form jenkins folder creation
             if root == jobs_folder:
                 continue
-            folders_list.append(root.replace(jobs_folder, "altair"))
+            folders_list.append(root.replace(jobs_folder, jenkins_parent_folder))
 
 
 def main():
@@ -51,21 +53,16 @@ def main():
     root_path = Path(__file__).parent.parent.absolute()
     jobs_folder = os.path.join(root_path, "jobs")
     template_file = os.path.join(root_path, "bin/JOB_TEMPLATE.xml")
-    _ = dotenv.load_dotenv(dotenv.find_dotenv())
 
     jenkins_url = os.environ["JENKINS_URL"]
-    jenkins_username = os.environ["JENKINS_USERNAME"]
-    jenkins_password = os.environ["JENKINS_PASSWORD"]
     jenkins_parent_folder = os.environ["CLUSTER_NS"]
+    jenkins_username = os.getenv("JENKINS_USERNAME")
+    jenkins_password = os.getenv("JENKINS_PASSWORD")
 
-    # pre-requisites check
-    if not jenkins_parent_folder:
-        print("CLUSTER_NS env variable is not set, exiting... ")
-        exit(1)
     if not jenkins_username:
-        jenkins_username = input("Enter Jenkins Username")
+        jenkins_username = input("Enter Jenkins Username: ")
     if not jenkins_password:
-        jenkins_password = getpass("Enter Jenkins Password")
+        jenkins_password = getpass.getpass("Enter Jenkins Password: ")
 
     server = jenkins.Jenkins(
         url=jenkins_url, username=jenkins_username, password=jenkins_password
@@ -79,12 +76,15 @@ def main():
         print(e)
         exit(1)
 
-    server.delete_job(jenkins_parent_folder)
+    try:
+        server.delete_job(jenkins_parent_folder)
+    except:
+        pass
     server.create_folder(folder_name=jenkins_parent_folder)
 
     folders_list = []
     jobs_list = []
-    populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder)
+    populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder, jenkins_parent_folder)
     create_jenkins_folder(server, folders_list)
     create_jenkins_job(server, jobs_list, jenkins_parent_folder, template_file)
 
