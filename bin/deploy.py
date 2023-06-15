@@ -23,7 +23,7 @@ def prepare_xml(template_file, jenkins_file_path):
 
 def create_jenkins_folder(server: jenkins.Jenkins, folders_list: list):
     for folder in folders_list:
-        print("Folder:", folder)
+        print("Creating Folder:", folder)
         server.create_job(folder, jenkins.EMPTY_FOLDER_XML)
 
 
@@ -34,6 +34,7 @@ def create_jenkins_job(
         template_xml = prepare_xml(
             template_file, job.replace(jenkins_parent_folder, "jobs")
         )
+        print("Creating Job:", job)
         server.create_job(job, template_xml)
 
 
@@ -75,7 +76,7 @@ def main():
         print("Error in Connecting to Jenkins server", jenkins_url)
         print(e)
         exit(1)
-
+        
     try:
         server.delete_job(jenkins_parent_folder)
     except:
@@ -87,7 +88,8 @@ def main():
     populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder, jenkins_parent_folder)
     create_jenkins_folder(server, folders_list)
     create_jenkins_job(server, jobs_list, jenkins_parent_folder, template_file)
-
+    print("All set, Jenkins jobs are configured successfully.")
+    print("Jobs Folder url:", jenkins_url+"/"+jenkins_parent_folder)
 
 if __name__ == "__main__":
     main()
