@@ -38,8 +38,6 @@ pipeline {
                     sh """#!/usr/bin/env bash
                     cd kf-configs
                     source activate $clusterNS ${params.clusterID}
-
-                    // Restart the selected deployment
                     kubectl rollout restart deployment/${params.Deployment}-service
                     """
                 

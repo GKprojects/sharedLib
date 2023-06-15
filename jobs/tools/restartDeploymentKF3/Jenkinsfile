@@ -6,7 +6,6 @@ pipeline {
 
     parameters {
         choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
-        
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
@@ -38,8 +37,6 @@ pipeline {
                     sh """#!/usr/bin/env bash
                     cd kf-configs
                     source activate $clusterNS ${params.clusterID}
-
-                    // Restart the selected deployment
                     kubectl rollout restart deployment/${params.Deployment}-service
                     """
                 
