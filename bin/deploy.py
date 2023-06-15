@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import jenkins
-from pathlib import Path
 import getpass
 from pathlib import Path
 import os
