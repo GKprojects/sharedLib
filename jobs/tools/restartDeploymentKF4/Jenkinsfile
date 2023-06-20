@@ -7,7 +7,7 @@ pipeline {
     parameters {
         choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
         
-        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+        choice(name: 'clusterID', choices: ['1', '2', '3', '4'], description: 'Cluster ID list; ignore for single cluster')
     }
 
     stages {
