@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the paths to the source and destination files
-source_file="jobs/tools/restartDeploymentKF4/Jenkinsfile"
-destination_file="jobs/tools/restartDeploymentKF3/Jenkinsfile"
+source_file="/home/runner/work/kf-jenkins/kf-jenkins/jobs/tools/restartDeploymentKF4/Jenkinsfile"
+destination_file="/home/runner/work/kf-jenkins/kf-jenkins/jobs/tools/restartDeploymentKF3/Jenkinsfile"
 
 # Define the lines in the destination file that should not be updated
 preserve_line=""
