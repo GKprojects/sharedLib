@@ -37,7 +37,7 @@ pipeline {
                     sh """#!/usr/bin/env bash
                     cd kf-configs
                     source activate $clusterNS ${params.clusterID}
-                    kubectl get pods -A  | egrep 'Error|Terminated|Completed' | awk ' {print "kubectl -n",$1,"delete pod",$2}' | sh
+                    kubectl get pods -A  | egrep 'Error|Terminated|Completed' | awk ' {print "kubectl -n",\$1,"delete pod",\$2}' | sh
                     """
                 
             }
