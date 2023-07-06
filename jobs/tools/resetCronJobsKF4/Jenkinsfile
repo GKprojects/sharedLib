@@ -1,0 +1,47 @@
+@Library('sharedLib@main') _
+def clusterNS
+
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'cronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
+    }
+
+    stages {
+        stage('Set NS variable') {
+            steps {
+                script {
+                    // Get the parent of the parent-folder of the job
+                    clusterNS = env.JOB_NAME.split('/')[0]
+                    env.clusterNS = clusterNS
+                }
+                echo "NS variable is set to: ${clusterNS}"
+            }
+        }
+        stage('Clone KF configs') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
+                    sh '''#!/usr/bin/env bash
+                    export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
+                    rm -rf kf-configs
+                    git clone git@github.com:OrangeScape/kf-configs.git
+                    '''
+                }
+            }
+        }
+        stage('Restart Deployment') {
+            steps {
+                    // Activate the environment variables and generate the kubeconfig
+                    sh """#!/usr/bin/env bash
+                    cd kf-configs
+                    source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
+                    make charts
+                    cd \$CHART_DIR # tochart
+                    echo "---------------- Resetting ${params.cronJob} CronJob ----------------"
+                    ./bin/deploy/kf-cronjobs.sh -c ${params.cronJob}
+                    """                
+            }
+        }
+    }
+}
