@@ -5,8 +5,8 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'NAMESPACE', choices: pegasiNamespaceChoices(), description: 'Pegasi Namespace')
-        choice(name: 'Kf4Deployment', choices: kf4DeploymentNameChoices(), description: 'Deployment list')
+        choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
     stages {
@@ -41,10 +41,10 @@ pipeline {
                     cd kf-configs
                     source activate $clusterNS ${params.clusterID}
                     kubectl get deployment/${params.Deployment}-service
-                    echo "Scaling up the ${params.Kf4Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
+                    echo "Scaling up the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
                     kubectl scale deployment/${params.Deployment}-service --replicas=1 -n ${params.NAMESPACE}
                     echo "Current status of the deployment" 
-                    kubectl -n ${params.NAMESPACE} get deployment ${params.Kf4Deployment}-service
+                    kubectl -n ${params.NAMESPACE} get deployment ${params.Deployment}-service
                     """          
                 }
             }
