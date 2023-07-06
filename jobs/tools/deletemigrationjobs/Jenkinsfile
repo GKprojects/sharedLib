@@ -9,7 +9,7 @@ pipeline {
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
 
         string(
-            name: 'JOB_NAME', 
+            name: 'MIGRATION_JOB_NAME', 
             description: 'Name of the Job to be deleted'
         )
     }
@@ -42,14 +42,14 @@ pipeline {
                 sh """#!/usr/bin/env bash
                 cd kf-configs
                 source activate ${clusterNS} ${params.clusterID}
-                kubectl get jobs \$JOB_NAME -n \$NAMESPACE
+                kubectl get jobs \$MIGRATION_JOB_NAME -n \$NAMESPACE
                 if [[ \$? -ne 0 ]]; then
                     echo "The mentioned job is not found in \${CLUSTER_NAME} \${CLUSTER_NUMBER}"
                     exit 1
                 else
-                    pod=\$(kubectl get pods -n \$NAMESPACE | grep \$JOB_NAME | awk -F ' ' '{print \$1}')
+                    pod=\$(kubectl get pods -n \$NAMESPACE | grep \$MIGRATION_JOB_NAME | awk -F ' ' '{print \$1}')
                     kubectl logs -f \$pod -n \$NAMESPACE
-                    kubectl delete job \$JOB_NAME -n \$NAMESPACE
+                    kubectl delete job \$MIGRATION_JOB_NAME -n \$NAMESPACE
                     if [[ \$? -ne 0 ]]; then
                         echo "The mentioned job was not deleted in \${CLUSTER_NAME} \${CLUSTER_NUMBER}, Please validate"
                         exit 1
