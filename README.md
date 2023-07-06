@@ -2,8 +2,8 @@
 
 ## Usage Steps
 
-### Activate the Cluster Namespace for which you want to create the jobs for
-source activate <cluster-ns>
+### Activate the Cluster Namespace for which you want to create the jobs for from kf-configs
+source activate cluster-ns 
 
 ### Perform make jenkins to download Jenkins charts similar to make charts
 make jenkins
