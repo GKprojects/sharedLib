@@ -1,4 +1,3 @@
-@Library('sharedLib@main') _
 def clusterNS
 
 pipeline {
