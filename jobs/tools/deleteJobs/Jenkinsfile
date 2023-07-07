@@ -1,0 +1,50 @@
+@Library('sharedLib@main') _
+def clusterNS
+
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+
+        string(
+            name: 'ENTER_JOB_NAME', 
+            description: 'Name of the Job to be deleted'
+        )
+    }
+
+    stages {
+        stage('Set NS variable') {
+            steps {
+                script {
+                    // Get the parent of the parent-folder of the job
+                    clusterNS = env.JOB_NAME.split('/')[0]
+                    env.clusterNS = clusterNS
+                }
+                echo "NS variable is set to: ${clusterNS}"
+            }
+        }
+        stage('Clone KF configs') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
+                    sh '''#!/usr/bin/env bash
+                    export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
+                    rm -rf kf-configs
+                    git clone git@github.com:OrangeScape/kf-configs.git
+                    '''
+                }
+            }
+        }
+        stage('Restart Deployment') {
+            steps {
+                // Activate the environment variables and generate the kubeconfig
+                sh """#!/usr/bin/env bash
+                cd kf-configs
+                source activate ${clusterNS} ${params.clusterID}
+                kubectl get jobs \$ENTER_JOB_NAME
+                kubectl delete job \$ENTER_JOB_NAME 
+                """
+            }
+        }
+    }
+}
