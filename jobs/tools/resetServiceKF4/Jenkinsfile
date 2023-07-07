@@ -5,7 +5,7 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'microService', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name of Microservice')
+        choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
@@ -39,8 +39,8 @@ pipeline {
                     source activate $clusterNS ${params.clusterID}
                     make charts
                     cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.microService} service ----------------"
-                    ./bin/deploy/kf-service.sh -s ${params.microService}
+                    echo "---------------- Resetting ${params.Deployment} service ----------------"
+                    ./bin/deploy/kf-service.sh -s ${params.Deployment}
                     """                
             }
         }
