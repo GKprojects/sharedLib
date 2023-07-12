@@ -35,7 +35,7 @@ pipeline {
             steps {
                 sh'''
                 cd kf-devops-tools/activateClusters/
-                source activate-\${clusterName} \${ClusterID}
+                source activate-\${clusterName} \${clusterID}
                 kubens \${clusterNS}
                 deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (3)" -o jsonpath="{.items[*].metadata.name}")"
                 kubectl scale deployment --replicas=0 \$deploymentList

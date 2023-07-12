@@ -5,7 +5,7 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'cronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
+        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
     }
 
     stages {
@@ -38,8 +38,8 @@ pipeline {
                     source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
                     make charts
                     cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.cronJob} CronJob ----------------"
-                    ./bin/deploy/kf-cronjobs.sh -c ${params.cronJob}
+                    echo "---------------- Resetting ${params.CronJob} CronJob ----------------"
+                    ./bin/deploy/kf-cronjobs.sh -c ${params.CronJob}
                     """                
             }
         }

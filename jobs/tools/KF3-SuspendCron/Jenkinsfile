@@ -1,10 +1,11 @@
+@Library('sharedLib@main') _
 def clusterNS
 
 pipeline {
     agent any
 
     parameters {
-        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name')
     }
 
     stages {
@@ -30,15 +31,14 @@ pipeline {
                     '''
                 }
             }
-        }        
-        stage('Scale down Deployments') {
+        }
+        stage('Suspend CronJobs') {
             steps {
                 sh'''
                 cd kf-devops-tools/activateClusters/
-                source activate-\${clusterName} \${clusterID}
+                source activate-\${clusterName} 1 # CronJobs are present only in Cluster 1
                 kubens \${clusterNS}
-                deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
-                kubectl scale deployment --replicas=0 \$deploymentList
+                kubectl patch cronjobs  \${CronJob}-cron -p '{"spec" : {"suspend" : true }}'
                 '''
             }
         }
