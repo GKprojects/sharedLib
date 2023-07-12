@@ -15,18 +15,20 @@ pipeline {
                 script {
                     // Get the parent of the parent-folder of the job
                     clusterNS = env.JOB_NAME.split('/')[0]
-                    env.clusterNS = clusterNS
+                    env.clusterName = clusterNS.split('-')[0]
+                    env.clusterNS = clusterNS.split('-')[1]
                 }
                 echo "NS variable is set to: ${clusterNS}"
+                echo "Cluster variable is set to: ${clusterName}"
             }
         }
-        stage('Clone KF configs') {
+        stage('Clone KF Devops Tools') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
                     sh '''#!/usr/bin/env bash
                     export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
-                    rm -rf kf-configs
-                    git clone git@github.com:OrangeScape/kf-configs.git
+                    rm -rf kf-devops-tools
+                    git clone git@github.com:OrangeScape/kf-devops-tools.git
                     '''
                 }
             }
@@ -38,8 +40,9 @@ pipeline {
                         error("Deployment name must be provided.")
                     }
                     sh """#!/usr/bin/env bash
-                    cd kf-configs
-                    source activate $clusterNS ${params.clusterID}
+                    cd kf-devops-tools/activateClusters/
+                    source activate-${clusterName} ${params.clusterID}
+                    kubens ${clusterNS}
                     kubectl get deployment/${params.Deployment}-service
                     echo "Scaling Down the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
                     kubectl scale deployment/${params.Deployment}-service --replicas=0 

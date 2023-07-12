@@ -33,7 +33,7 @@ pipeline {
                 }
             }
         }
-        stage('Restart Deployment') {
+        stage('Cleanup Error pods') {
             steps {
                     // Activate the environment variables and generate the kubeconfig
                     sh """#!/usr/bin/env bash
