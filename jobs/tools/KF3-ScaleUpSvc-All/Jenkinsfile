@@ -13,33 +13,33 @@ pipeline {
                 script {
                     // Get the parent of the parent-folder of the job
                     clusterNS = env.JOB_NAME.split('/')[0]
-                    env.clusterName = clusterNS.split('-')[0]
-                    env.clusterNS = clusterNS.split('-')[1]
+                    env.clusterNS = clusterNS
                 }
                 echo "NS variable is set to: ${clusterNS}"
                 echo "Cluster variable is set to: ${clusterName}"
             }
         }
-        stage('Clone KF Devops Tools') {
+        stage('Clone KF configs') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
                     sh '''#!/usr/bin/env bash
                     export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
-                    rm -rf kf-devops-tools
-                    git clone git@github.com:OrangeScape/kf-devops-tools.git
+                    rm -rf kf-configs
+                    git clone git@github.com:OrangeScape/kf-configs.git
                     '''
                 }
             }
         }        
-        stage('Scale up Deployments') {
+        stage('Scale up all Deployments') {
             steps {
-                sh'''
-                cd kf-devops-tools/activateClusters/
-                source activate-\${clusterName} \${ClusterID}
-                kubens \${clusterNS}
-                deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
-                kubectl scale deployment --replicas=1 \$deploymentList
-                '''
+                    sh """#!/usr/bin/env bash
+                    cd kf-configs
+                    source activate $clusterNS ${params.clusterID}
+                    make charts
+                    cd \$CHART_DIR # tochart
+                    echo "---------------- Scaling up all services ----------------"
+                    ./bin/deploy/kf-service.sh
+                    """                
             }
         }
     }
