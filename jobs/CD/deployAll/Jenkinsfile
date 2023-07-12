@@ -1,0 +1,86 @@
+def clusterNS
+
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+    }
+
+    stages {
+        stage('Set NS variable') {
+            steps {
+                script {
+                    // Get the parent of the parent-folder of the job
+                    clusterNS = env.JOB_NAME.split('/')[0]
+                    env.clusterNS = clusterNS
+                }
+                echo "NS variable is set to: ${clusterNS}"
+            }
+        }
+        stage('Check & Approve') {
+            steps {
+                input message: "Do you want to redeploy the $clusterNS namespace? Please confirm.", ok: 'Proceed', submitterParameter: 'APPROVER'
+            }
+        }
+        stage('Clone kf-configs and prepare charts') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
+                    sh """
+                    #!/usr/bin/env bash
+                    set +xe
+                    shopt -s expand_aliases
+                    rm -rf kf-configs
+                    git clone git@github.com:OrangeScape/kf-configs.git kf-configs && \\
+                    cd kf-configs && \\
+                    source activate $clusterNS ${params.clusterID} 
+                    make charts
+                    """
+                }
+            }
+        }
+        stage("Deploying kf-service-ns-resources") {
+            steps {
+                sh """
+                #!/usr/bin/env bash
+                set +xe
+                shopt -s expand_aliases
+                cd kf-configs
+                source activate $clusterNS ${params.clusterID} 
+                tochart
+                ./bin/deploy/kf-service-ns-resources.sh
+                """
+            }
+        }
+        stage("Deploying kf-services") {
+            steps {
+                sh """
+                #!/usr/bin/env bash
+                set +xe
+                shopt -s expand_aliases
+                cd kf-configs
+                source activate $clusterNS ${params.clusterID} 
+                tochart
+                ./bin/deploy/kf-service.sh
+                """
+            }
+        }
+        stage("Deploying kf-cronjobs") {
+            steps {
+                script {
+                    if (params.clusterID  == '1') {
+                        sh """
+                        #!/usr/bin/env bash
+                        set +xe
+                        shopt -s expand_aliases
+                        cd kf-configs
+                        source activate $clusterNS ${params.clusterID} 
+                        tochart
+                        ./bin/deploy/kf-cronjobs.sh
+                        """
+                    }            
+                }
+            }
+        }
+    }
+}
