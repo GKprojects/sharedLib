@@ -28,7 +28,7 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                     export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                     rm -rf kf-devops-tools
-                    git clone git@github.com:OrangeScape/kf-devops-tools.git
+                    git clone git@github.com:OrangeScape/kf-configs.git
                     '''
                 }
             }
@@ -40,9 +40,8 @@ pipeline {
                         error("Deployment name must be provided.")
                     }
                     sh """#!/usr/bin/env bash
-                    cd kf-devops-tools/activateClusters/
+                    cd kf-configs
                     source activate-${clusterName} ${params.clusterID}
-                    kubens ${clusterNS}
                     kubectl get deployment/${params.Deployment}-service
                     echo "Scaling up the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
                     kubectl scale deployment/${params.Deployment}-service --replicas=1 
