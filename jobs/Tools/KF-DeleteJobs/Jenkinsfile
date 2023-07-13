@@ -1,11 +1,15 @@
-@Library('sharedLib@main') _
 def clusterNS
 
 pipeline {
     agent any
 
     parameters {
-        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+
+        string(
+            name: 'ENTER_JOB_NAME', 
+            description: 'Name of the Job to be deleted'
+        )
     }
 
     stages {
@@ -30,17 +34,15 @@ pipeline {
                 }
             }
         }
-        stage('Restart Deployment') {
+        stage('Delete Job') {
             steps {
-                    // Activate the environment variables and generate the kubeconfig
-                    sh """#!/usr/bin/env bash
-                    cd kf-configs
-                    source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
-                    make charts
-                    cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.CronJob} CronJob ----------------"
-                    ./bin/deploy/kf-cronjobs.sh -c ${params.CronJob}
-                    """                
+                // Activate the environment variables and generate the kubeconfig
+                sh """#!/usr/bin/env bash
+                cd kf-configs
+                source activate $clusterNS ${params.clusterID}
+                kubectl get jobs \$ENTER_JOB_NAME
+                kubectl delete job \$ENTER_JOB_NAME 
+                """
             }
         }
     }

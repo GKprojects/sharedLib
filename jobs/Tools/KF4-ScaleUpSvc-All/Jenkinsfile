@@ -1,11 +1,10 @@
-@Library('sharedLib@main') _
 def clusterNS
 
 pipeline {
     agent any
 
     parameters {
-        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
     stages {
@@ -17,6 +16,7 @@ pipeline {
                     env.clusterNS = clusterNS
                 }
                 echo "NS variable is set to: ${clusterNS}"
+                echo "Cluster variable is set to: ${clusterName}"
             }
         }
         stage('Clone KF configs') {
@@ -29,18 +29,15 @@ pipeline {
                     '''
                 }
             }
-        }
-        stage('Restart Deployment') {
+        }        
+        stage('Scale up all Deployments') {
             steps {
-                    // Activate the environment variables and generate the kubeconfig
-                    sh """#!/usr/bin/env bash
-                    cd kf-configs
-                    source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
-                    make charts
-                    cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.CronJob} CronJob ----------------"
-                    ./bin/deploy/kf-cronjobs.sh -c ${params.CronJob}
-                    """                
+                sh"""
+                cd kf-configs
+                source activate $clusterNS ${params.clusterID}
+                deploymentList="$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
+                kubectl scale deployment --replicas=1 $deploymentList
+                """            
             }
         }
     }

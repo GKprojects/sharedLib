@@ -31,7 +31,7 @@ pipeline {
                     set +xe
                     shopt -s expand_aliases
                     rm -rf kf-configs
-                    git clone git@github.com:OrangeScape/kf-configs.git kf-configs && \\
+                    git clone --depth 1 git@github.com:OrangeScape/kf-configs.git kf-configs && \\
                     cd kf-configs && \\
                     source activate $clusterNS ${params.clusterID} 
                     make charts

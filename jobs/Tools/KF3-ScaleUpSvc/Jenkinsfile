@@ -26,22 +26,27 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                     export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                     rm -rf kf-configs
-                    git clone --depth 1 git@github.com:OrangeScape/kf-configs.git
+                    git clone --depth=1 git@github.com:OrangeScape/kf-configs.git 
                     '''
                 }
             }
         }
-        stage('Restart Deployment') {
+        stage('Scale UP Deployment') {
             steps {
-                    // Activate the environment variables and generate the kubeconfig
+              script {
+                    if (params.DEPLOYMENT_NAME == '') {
+                        error("Deployment name must be provided.")
+                    }
                     sh """#!/usr/bin/env bash
                     cd kf-configs
-                    source activate $clusterNS ${params.clusterID}
-                    make charts
-                    cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.Deployment} service ----------------"
-                    ./bin/deploy/kf-service.sh -s ${params.Deployment}
-                    """                
+                    source activate $clusterNS ${params.clusterID} 
+                    kubectl get deployment/${params.Deployment}-service
+                    echo "Scaling up the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
+                    kubectl scale deployment/${params.Deployment}-service --replicas=1 
+                    echo "Current status of the deployment" 
+                    kubectl get deployment ${params.Deployment}-service
+                    """          
+                }
             }
         }
     }

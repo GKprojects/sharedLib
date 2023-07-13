@@ -5,7 +5,7 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
+        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name')
     }
 
     stages {
@@ -30,17 +30,13 @@ pipeline {
                 }
             }
         }
-        stage('Restart Deployment') {
+        stage('Suspend CronJobs') {
             steps {
-                    // Activate the environment variables and generate the kubeconfig
-                    sh """#!/usr/bin/env bash
-                    cd kf-configs
-                    source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
-                    make charts
-                    cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.CronJob} CronJob ----------------"
-                    ./bin/deploy/kf-cronjobs.sh -c ${params.CronJob}
-                    """                
+                sh"""
+                cd kf-configs
+                source activate $clusterNS 1 # CronJobs are present only in Cluster 1
+                kubectl patch cronjobs ${CronJob}-cron -p '{"spec" : {"suspend" : true }}'
+                """
             }
         }
     }

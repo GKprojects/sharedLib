@@ -5,7 +5,8 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'CronJob', choices: getCronJobNames(env.JOB_NAME), description: 'CronJob Name of Microservice')
+        choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
     stages {
@@ -30,17 +31,22 @@ pipeline {
                 }
             }
         }
-        stage('Restart Deployment') {
+        stage('Scale DOWN Deployment') {
             steps {
-                    // Activate the environment variables and generate the kubeconfig
+              script {
+                    if (params.DEPLOYMENT_NAME == '') {
+                        error("Deployment name must be provided.")
+                    }
                     sh """#!/usr/bin/env bash
                     cd kf-configs
-                    source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
-                    make charts
-                    cd \$CHART_DIR # tochart
-                    echo "---------------- Resetting ${params.CronJob} CronJob ----------------"
-                    ./bin/deploy/kf-cronjobs.sh -c ${params.CronJob}
-                    """                
+                    source activate $clusterNS ${params.clusterID}
+                    kubectl get deployment/${params.Deployment}-service
+                    echo "Scaling Down the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
+                    kubectl scale deployment/${params.Deployment}-service --replicas=0 
+                    echo "Current status of the deployment" 
+                    kubectl get deployment ${params.Deployment}-service
+                    """          
+                }
             }
         }
     }
