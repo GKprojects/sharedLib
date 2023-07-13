@@ -27,8 +27,8 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
                     sh '''#!/usr/bin/env bash
                     export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
-                    rm -rf kf-devops-tools
-                    git clone git@github.com:OrangeScape/kf-configs.git
+                    rm -rf kf-configs
+                    git clone --depth=1 git@github.com:OrangeScape/kf-configs.git 
                     '''
                 }
             }
