@@ -33,6 +33,7 @@ pipeline {
                     rm -rf kf-configs
                     git clone --depth 1 git@github.com:OrangeScape/kf-configs.git kf-configs && \\
                     cd kf-configs && \\
+                   ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                     source activate $clusterNS ${params.clusterID} 
                     make charts
                     """

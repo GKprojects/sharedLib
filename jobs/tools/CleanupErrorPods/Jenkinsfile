@@ -36,6 +36,7 @@ pipeline {
                     // Activate the environment variables and generate the kubeconfig
                     sh """#!/usr/bin/env bash
                     cd kf-configs
+                    ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                     source activate $clusterNS ${params.clusterID}
                     kubectl get pods | egrep 'Error|Terminated|Completed' | awk ' {print "kubectl -n",\$1,"delete pod",\$2}' | sh
                     """

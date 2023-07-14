@@ -35,6 +35,7 @@ pipeline {
                     // Activate the environment variables and generate the kubeconfig
                     sh """#!/usr/bin/env bash
                     cd kf-configs
+                    ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                     source activate $clusterNS 1 # Cluster ID will always be set to 1 for cronjobs 
                     make charts
                     cd \$CHART_DIR # tochart

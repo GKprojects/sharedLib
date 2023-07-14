@@ -4,12 +4,13 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
-
         string(
             name: 'k8sJobName', 
             description: 'Name of the Job to be deleted; use regex like schedulerv2-cron-* to delete multiple jobs. '
         )
+        choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+
+     
     }
 
     stages {
@@ -39,9 +40,9 @@ pipeline {
                 // Activate the environment variables and generate the kubeconfig
                 sh """#!/usr/bin/env bash
                 cd kf-configs
+                ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                 source activate $clusterNS ${params.clusterID}
-                kubectl get jobs -o name | grep -E '\$k8sJobName'
-                kubectl get jobs -o name | grep -E '\$k8sJobName' | xargs kubectl delete
+                kubectl get jobs | grep -P \$k8sJobName | awk '{print \$1}' | xargs kubectl delete job
                 """
             }
         }
