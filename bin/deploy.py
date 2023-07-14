@@ -4,6 +4,7 @@ import jenkins
 import getpass
 from pathlib import Path
 import os
+import re
 
 
 def prepare_xml(template_file, jenkins_file_path):
@@ -14,10 +15,8 @@ def prepare_xml(template_file, jenkins_file_path):
         "{git_branch}": os.getenv("KF_JENKINS_GIT_BRANCH", "main"),
         "{jenkins_file_path}": jenkins_file_path + "/Jenkinsfile",
     }
-
     for key, value in replacements.items():
         template_xml = template_xml.replace(key, value)
-
     return template_xml
 
 
@@ -27,18 +26,16 @@ def create_jenkins_folder(server: jenkins.Jenkins, folders_list: list):
         server.create_job(folder, jenkins.EMPTY_FOLDER_XML)
 
 
-def create_jenkins_job(
-    server: jenkins.Jenkins, jobs_list: list, jenkins_parent_folder, template_file
-):
+def create_jenkins_job(server: jenkins.Jenkins, jobs_list: list, jenkins_parent_folder, template_file):
+    pattern = re.compile(f"^{jenkins_parent_folder}/(KF4|KF3)")
     for job in jobs_list:
-        template_xml = prepare_xml(
-            template_file, job.replace(jenkins_parent_folder, "jobs")
-        )
+        job_sytem_path = pattern.sub("jobs", job)
+        template_xml = prepare_xml(template_file, job_sytem_path)
         print("Creating Job:", job)
         server.create_job(job, template_xml)
 
 
-def populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder, jenkins_parent_folder):
+def get_folder_tree(folders_list, jobs_list, jobs_folder, jenkins_parent_folder):
     for root, dirs, files in os.walk(jobs_folder):
         if "Jenkinsfile" in files:
             jobs_list.append(root.replace(jobs_folder, jenkins_parent_folder))
@@ -49,47 +46,64 @@ def populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder, jenkins_
             folders_list.append(root.replace(jobs_folder, jenkins_parent_folder))
 
 
+from pathlib import Path
+import os
+import jenkins
+import getpass
+
+
 def main():
-    # get root path kf-jenkins folder; this the base path all folder walks
+    # Get root path of kf-jenkins folder; this the base path for all folder walks
     root_path = Path(__file__).parent.parent.absolute()
     jobs_folder = os.path.join(root_path, "jobs")
     template_file = os.path.join(root_path, "bin/JOB_TEMPLATE.xml")
 
+    # Fetch Jenkins configurations from environment variables
     jenkins_url = os.environ["JENKINS_URL"]
     jenkins_parent_folder = os.environ["CLUSTER_NS"]
-    jenkins_username = os.getenv("JENKINS_USERNAME")
-    jenkins_password = os.getenv("JENKINS_PASSWORD")
+    jenkins_username = os.getenv("JENKINS_USERNAME", input("Enter Jenkins Username: "))
+    jenkins_password = os.getenv("JENKINS_PASSWORD", getpass.getpass("Enter Jenkins Password: "))
 
-    if not jenkins_username:
-        jenkins_username = input("Enter Jenkins Username: ")
-    if not jenkins_password:
-        jenkins_password = getpass.getpass("Enter Jenkins Password: ")
-
+    # Connect to Jenkins server
     server = jenkins.Jenkins(
         url=jenkins_url, username=jenkins_username, password=jenkins_password
     )
     try:
         user = server.get_whoami()
         version = server.get_version()
-        print("Hello %s from Jenkins %s" % (user["fullName"], version))
+        print(f"Hello {user['fullName']} from Jenkins {version}")
     except Exception as e:
-        print("Error in Connecting to Jenkins server", jenkins_url)
-        print(e)
+        print(f"Error in Connecting to Jenkins server {jenkins_url}\n{e}")
         exit(1)
 
+    # Delete the Jenkins parent folder if it exists and create a new one
     try:
         server.delete_job(jenkins_parent_folder)
     except:
         pass
     server.create_folder(folder_name=jenkins_parent_folder)
 
-    folders_list = []
-    jobs_list = []
-    populate_jenkins_folders_jobs(folders_list, jobs_list, jobs_folder, jenkins_parent_folder)
-    create_jenkins_folder(server, folders_list)
-    create_jenkins_job(server, jobs_list, jenkins_parent_folder, template_file)
-    print("All set, Jenkins jobs are configured successfully.")
-    print("Jobs Folder url:", jenkins_url+"/job/"+jenkins_parent_folder)
+    # Define required lists
+    system_folders_list = []
+    system_jobs_list = []
+    jenkins_jobs_list = []
+    jenkins_folders_list = [f"{jenkins_parent_folder}/KF3", f"{jenkins_parent_folder}/KF4"]
 
+    get_folder_tree(system_folders_list, system_jobs_list, jobs_folder, jenkins_parent_folder)
+
+    # Append system folders and jobs to their respective Jenkins lists
+    for item in system_folders_list:
+        jenkins_folders_list.extend([f"{jenkins_parent_folder}/KF3/{'/'.join(item.split('/')[1:])}",
+                                      f"{jenkins_parent_folder}/KF4/{'/'.join(item.split('/')[1:])}"])
+    for item in system_jobs_list:
+        kf3_item = item.replace(f'{jenkins_parent_folder}/', f'{jenkins_parent_folder}/KF3/')
+        kf4_item = item.replace(f'{jenkins_parent_folder}/', f'{jenkins_parent_folder}/KF4/')
+        jenkins_jobs_list.extend([kf3_item, kf4_item])
+
+    create_jenkins_folder(server, jenkins_folders_list)
+    create_jenkins_job(server, jenkins_jobs_list, jenkins_parent_folder, template_file)
+
+    print("All set, Jenkins jobs are configured successfully.")
+    print(f"Jobs Folder url: {jenkins_url}/job/{jenkins_parent_folder}")
 if __name__ == "__main__":
     main()

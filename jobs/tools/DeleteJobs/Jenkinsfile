@@ -5,6 +5,11 @@ pipeline {
 
     parameters {
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
+
+        string(
+            name: 'k8sJobName', 
+            description: 'Name of the Job to be deleted; use regex like schedulerv2-cron-* to delete multiple jobs. '
+        )
     }
 
     stages {
@@ -28,14 +33,15 @@ pipeline {
                     '''
                 }
             }
-        }        
-        stage('Scale down Deployments') {
+        }
+        stage('Delete Job') {
             steps {
-                sh"""
+                // Activate the environment variables and generate the kubeconfig
+                sh """#!/usr/bin/env bash
                 cd kf-configs
                 source activate $clusterNS ${params.clusterID}
-                deploymentList="$(kubectl get deployment -l "app.kissflow.com/version in (3)" -o jsonpath="{.items[*].metadata.name}")"
-                kubectl scale deployment --replicas=0 $deploymentList
+                kubectl get jobs -o name | grep -E '\$k8sJobName'
+                kubectl get jobs -o name | grep -E '\$k8sJobName' | xargs kubectl delete
                 """
             }
         }

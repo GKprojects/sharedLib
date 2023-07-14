@@ -1,13 +1,13 @@
-<flow-definition plugin="workflow-job@1308.v58d48a_763b_31">
+<flow-definition plugin="workflow-job">
 <actions>
-<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2133.ve46a_6113dfc3"/>
-<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2133.ve46a_6113dfc3">
+<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition"/>
+<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition">
 <jobProperties/>
 <triggers/>
 <parameters/>
 <options/>
 </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
-<org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction plugin="workflow-multibranch@756.v891d88f2cd46">
+<org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction plugin="workflow-multibranch">
 <jobPropertyDescriptors>
 <string>hudson.model.ParametersDefinitionProperty</string>
 </jobPropertyDescriptors>
@@ -16,13 +16,13 @@
 <description/>
 <keepDependencies>false</keepDependencies>
 <properties>
-<com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@320.v5a_0933a_e7d61">
+<com.sonyericsson.rebuild.RebuildSettings plugin="rebuild">
 <autoRebuild>false</autoRebuild>
 <rebuildDisabled>false</rebuildDisabled>
 </com.sonyericsson.rebuild.RebuildSettings>
 </properties>
-<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@3691.v28b_14c465a_b_b_">
-<scm class="hudson.plugins.git.GitSCM" plugin="git@5.1.0">
+<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+<scm class="hudson.plugins.git.GitSCM" plugin="git">
 <configVersion>2</configVersion>
 <userRemoteConfigs>
 <hudson.plugins.git.UserRemoteConfig>

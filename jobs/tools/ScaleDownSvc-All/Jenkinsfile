@@ -18,6 +18,11 @@ pipeline {
                 echo "NS variable is set to: ${clusterNS}"
             }
         }
+        stage('Check & Approve') {
+            steps {
+                input message: "Do you want to scled down the deployments in $clusterNS namespace? Please confirm.", ok: 'Proceed', submitterParameter: 'APPROVER'
+            }
+        }
         stage('Clone KF configs') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {

@@ -1,9 +1,11 @@
+@Library('sharedLib@main') _
 def clusterNS
 
 pipeline {
     agent any
 
     parameters {
+        choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
 
@@ -28,15 +30,25 @@ pipeline {
                     '''
                 }
             }
-        }        
-        stage('Scale up all Deployments') {
+        }
+        stage('Scale DOWN Deployment') {
             steps {
-                    sh"""
+              script {
+                    if (params.DEPLOYMENT_NAME == '') {
+                        error("Deployment name must be provided.")
+                    }
+                    sh """#!/usr/bin/env bash
                     cd kf-configs
                     source activate $clusterNS ${params.clusterID}
-                    deploymentList="$(kubectl get deployment -l "app.kissflow.com/version in (3)" -o jsonpath="{.items[*].metadata.name}")"
-                    kubectl scale deployment --replicas=1 $deploymentList
-                    """                
+                    kubectl get deployment/${params.Deployment}-service
+                    echo "Scaling Down the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
+                    kubectl scale deployment/${params.Deployment}-service --replicas=0 
+                    echo "sleeping for 5 seconds..."
+                    sleep 5
+                    echo "Current status of the deployment" 
+                    kubectl get deployment ${params.Deployment}-service
+                    """          
+                }
             }
         }
     }
