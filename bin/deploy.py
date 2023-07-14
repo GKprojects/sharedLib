@@ -61,8 +61,8 @@ def main():
     # Fetch Jenkins configurations from environment variables
     jenkins_url = os.environ["JENKINS_URL"]
     jenkins_parent_folder = os.environ["CLUSTER_NS"]
-    jenkins_username = os.getenv("JENKINS_USERNAME", input("Enter Jenkins Username: "))
-    jenkins_password = os.getenv("JENKINS_PASSWORD", getpass.getpass("Enter Jenkins Password: "))
+    jenkins_username = os.getenv("JENKINS_USERNAME") or input("Enter Jenkins Username: ")
+    jenkins_password = os.getenv("JENKINS_PASSWORD") or getpass.getpass("Enter Jenkins Password: ")
 
     # Connect to Jenkins server
     server = jenkins.Jenkins(
