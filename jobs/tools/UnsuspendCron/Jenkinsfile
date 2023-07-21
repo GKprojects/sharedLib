@@ -12,7 +12,6 @@ pipeline {
         stage('Set NS variable') {
             steps {
                 script {
-                    // Get the parent of the parent-folder of the job
                     clusterNS = env.JOB_NAME.split('/')[0]
                     env.clusterNS = clusterNS
                 }
@@ -30,13 +29,13 @@ pipeline {
                 }
             }
         }
-        stage('Suspend cron') {
+        stage('Unsuspend cron') {
             steps {
                     sh '''#!/usr/bin/env bash
                     cd kf-configs
                     ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                     source activate $clusterNS 1 # CronJobs are present only in Cluster 1
-                    kubectl patch cronjobs ${CronJob}-cron -p '{"spec" : {"suspend" : true }}'
+                    kubectl patch cronjobs ${CronJob}-cron -p '{"spec" : {"suspend" : false }}'
                     '''
             }
         }
