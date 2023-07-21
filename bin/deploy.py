@@ -5,7 +5,10 @@ import getpass
 from pathlib import Path
 import os
 import re
+import sys
+import requests
 
+script_name = os.path.basename(sys.argv[0])
 
 def prepare_xml(template_file, jenkins_file_path):
     template_xml = Path(template_file).read_text()
@@ -45,6 +48,16 @@ def get_folder_tree(folders_list, jobs_list, jobs_folder, jenkins_parent_folder)
                 continue
             folders_list.append(root.replace(jobs_folder, jenkins_parent_folder))
 
+def send_notification(message):
+    webhook_url = "https://chat.googleapis.com/v1/spaces/AAAASAnfTNY/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=Z9u9vLWAS_Ri74xEIsw9z17lbA6sSbl6Qpn9iyiMvF4"
+    headers = {"Content-Type": "application/json"}
+    payload = {"text": message}
+    response = requests.post(webhook_url, json=payload, headers=headers)
+    if response.status_code == 200:
+        print("Notification sent successfully.")
+    else:
+        print(f"Failed to send notification. Status code: {response.status_code}")
+
 
 from pathlib import Path
 import os
@@ -81,6 +94,16 @@ def main():
         server.delete_job(jenkins_parent_folder)
     except:
         pass
+    
+    # Send a notification & Exit the If undeploy.py is executed 
+    if script_name == "undeploy.py":
+        print(f"Undeploy script is executed, hence deleted {jenkins_parent_folder} & exiting")
+        print(f"Execute deploy.py to create jobs in {jenkins_parent_folder}")
+        message = f"Undeploy script is executed, {user['fullName']} removed {jenkins_parent_folder} folder from Jenkins server {jenkins_url}"
+        print(message)
+        send_notification(message)
+        sys.exit(0)
+        
     server.create_folder(folder_name=jenkins_parent_folder)
 
     # Define required lists
