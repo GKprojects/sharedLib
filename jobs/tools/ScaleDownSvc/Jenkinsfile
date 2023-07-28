@@ -4,6 +4,10 @@ def clusterNS
 pipeline {
     agent any
 
+    environment {
+        SSH_KEY = credentials('rammanokar_github')
+    }
+
     parameters {
         choice(name: 'Deployment', choices: getDeploymentNames(env.JOB_NAME), description: 'Deployment Name')
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
@@ -22,13 +26,11 @@ pipeline {
         }
         stage('Clone KF configs') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
                     sh '''#!/usr/bin/env bash
                     export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                     rm -rf kf-configs
                     git clone --depth 1 git@github.com:OrangeScape/kf-configs.git
                     '''
-                }
             }
         }
         stage('Scale DOWN Deployment') {
