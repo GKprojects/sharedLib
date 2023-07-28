@@ -42,8 +42,8 @@ pipeline {
                 cd kf-configs
                 ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                 source activate $clusterNS ${params.clusterID}
-                deploymentList="$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
-                kubectl scale deployment --replicas=0 $deploymentList
+                deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
+                kubectl scale deployment --replicas=0 \$deploymentList
                 """
             }
         }
