@@ -3,6 +3,10 @@ def clusterNS
 pipeline {
     agent any
 
+    environment {
+        SSH_KEY = credentials('rammanokar_github')
+    }
+
     parameters {
         choice(name: 'clusterID', choices: ['1', '2', '3'], description: 'Cluster ID list; ignore for single cluster')
     }
@@ -25,26 +29,21 @@ pipeline {
         }
         stage('Clone kf-configs and prepare charts') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'rammanokar_github', keyFileVariable: 'SSH_KEY')]) {
-                    sh """
-                    #!/usr/bin/env bash
-                    set +xe
-                    shopt -s expand_aliases
+                    sh """#!/usr/bin/env bash
+                    export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                     rm -rf kf-configs
                     git clone --depth 1 git@github.com:OrangeScape/kf-configs.git kf-configs && \\
                     cd kf-configs && \\
-                   ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
+                    ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                     source activate $clusterNS ${params.clusterID} 
                     make charts
                     """
-                }
             }
         }
         stage("Deploying kf-service-ns-resources") {
             steps {
-                sh """
-                #!/usr/bin/env bash
-                set +xe
+                sh """#!/usr/bin/env bash
+                export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                 shopt -s expand_aliases
                 cd kf-configs
                 source activate $clusterNS ${params.clusterID} 
@@ -55,9 +54,8 @@ pipeline {
         }
         stage("Deploying kf-services") {
             steps {
-                sh """
-                #!/usr/bin/env bash
-                set +xe
+                sh """#!/usr/bin/env bash
+                export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                 shopt -s expand_aliases
                 cd kf-configs
                 source activate $clusterNS ${params.clusterID} 
@@ -70,9 +68,8 @@ pipeline {
             steps {
                 script {
                     if (params.clusterID  == '1') {
-                        sh """
-                        #!/usr/bin/env bash
-                        set +xe
+                        sh """#!/usr/bin/env bash
+                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY"
                         shopt -s expand_aliases
                         cd kf-configs
                         source activate $clusterNS ${params.clusterID} 
