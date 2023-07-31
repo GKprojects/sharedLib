@@ -20,7 +20,6 @@ pipeline {
                     env.clusterNS = clusterNS
                 }
                 echo "NS variable is set to: ${clusterNS}"
-                echo "Cluster variable is set to: ${clusterName}"
             }
         }
         stage('Clone KF configs') {
@@ -40,6 +39,9 @@ pipeline {
                 source activate $clusterNS ${params.clusterID}
                 deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
                 kubectl scale deployment --replicas=1 \$deploymentList
+                echo "sleeping for 45 seconds..."
+                sleep 45
+                echo "**************** Note: This Job will scale up all deployments including few services which have been paused/scaled down for your namespace. So prefer DeployAll job unless you have a specific need to scale up all services ****************"
                 """            
             }
         }

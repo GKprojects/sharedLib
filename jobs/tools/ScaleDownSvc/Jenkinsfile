@@ -46,8 +46,8 @@ pipeline {
                     kubectl get deployment/${params.Deployment}-service
                     echo "Scaling Down the ${params.Deployment}-service deployment in  $clusterNS ${params.clusterID} namespace"
                     kubectl scale deployment/${params.Deployment}-service --replicas=0 
-                    echo "sleeping for 5 seconds..."
-                    sleep 5
+                    echo "sleeping for 15 seconds..."
+                    sleep 15
                     echo "Current status of the deployment" 
                     kubectl get deployment ${params.Deployment}-service
                     """          

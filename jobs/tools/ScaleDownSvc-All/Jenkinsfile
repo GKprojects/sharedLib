@@ -44,6 +44,8 @@ pipeline {
                 source activate $clusterNS ${params.clusterID}
                 deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
                 kubectl scale deployment --replicas=0 \$deploymentList
+                echo "sleeping for 45 seconds..."
+                sleep 45
                 """
             }
         }
