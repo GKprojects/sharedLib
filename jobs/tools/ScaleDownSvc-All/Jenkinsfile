@@ -42,7 +42,12 @@ pipeline {
                 cd kf-configs
                 ./create-pegasi.sh $clusterNS 2>&1 >/dev/null || true
                 source activate $clusterNS ${params.clusterID}
-                deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (4)" -o jsonpath="{.items[*].metadata.name}")"
+                if [[ $JOB_NAME == *"KF4"* ]]; then
+                    KF_VERSION="4"
+                else
+                    KF_VERSION="3"
+                fi
+                deploymentList="\$(kubectl get deployment -l "app.kissflow.com/version in (\$KF_VERSION)" -o jsonpath="{.items[*].metadata.name}")"
                 kubectl scale deployment --replicas=0 \$deploymentList
                 echo "sleeping for 45 seconds..."
                 sleep 45
